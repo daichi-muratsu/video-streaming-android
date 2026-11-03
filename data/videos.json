@@ -1,0 +1,55 @@
+{
+  "videos": [
+    {
+      "id": "big-buck-bunny",
+      "title": "Big Buck Bunny",
+      "description": "森に住む大きなウサギと、いたずら好きな3匹の動物たちの物語。",
+      "creator": "Blender Foundation",
+      "durationSeconds": 596,
+      "publishedAt": "2008-05-30",
+      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/thumbnails/big-buck-bunny.jpg",
+      "streamUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/big-buck-bunny/master.m3u8",
+      "tags": ["animation", "comedy"],
+      "license": {
+        "name": "CC BY 3.0",
+        "url": "https://creativecommons.org/licenses/by/3.0/",
+        "attribution": "(c) copyright 2008, Blender Foundation / www.bigbuckbunny.org",
+        "changes": "HLS形式に変換し、3つの画質（360p / 720p / 1080p）に再エンコード。サムネイルは本編の1場面を16:9に切り抜いたもの"
+      }
+    },
+    {
+      "id": "sintel",
+      "title": "Sintel",
+      "description": "少女シンテルが、いなくなった小さなドラゴンを探して、雪山を越える旅に出るファンタジー。",
+      "creator": "Blender Foundation",
+      "durationSeconds": 888,
+      "publishedAt": "2010-09-30",
+      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/thumbnails/sintel.jpg",
+      "streamUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/sintel/master.m3u8",
+      "tags": ["animation", "fantasy"],
+      "license": {
+        "name": "CC BY 3.0",
+        "url": "https://creativecommons.org/licenses/by/3.0/",
+        "attribution": "© copyright Blender Foundation | durian.blender.org",
+        "changes": "HLS形式に変換し、3つの画質（360p / 720p / 1080p）に再エンコード。サムネイルは本編の1場面を16:9に切り抜いたもの"
+      }
+    },
+    {
+      "id": "tears-of-steel",
+      "title": "Tears of Steel",
+      "description": "ロボットに支配された未来のアムステルダムで、科学者と兵士たちが、過去のある出来事を再現して世界を救おうとするSF。実写とCGを合成した作品。",
+      "creator": "Blender Foundation",
+      "durationSeconds": 734,
+      "publishedAt": "2012-09-26",
+      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/thumbnails/tears-of-steel.jpg",
+      "streamUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/tears-of-steel/master.m3u8",
+      "tags": ["live-action", "sci-fi"],
+      "license": {
+        "name": "CC BY 3.0",
+        "url": "https://creativecommons.org/licenses/by/3.0/",
+        "attribution": "(CC) Blender Foundation | mango.blender.org",
+        "changes": "HLS形式に変換し、3つの画質（360p / 720p / 1080p）に再エンコード。サムネイルは本編の1場面を16:9に切り抜いたもの"
+      }
+    }
+  ]
+}
