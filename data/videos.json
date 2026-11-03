@@ -7,7 +7,7 @@
       "creator": "Blender Foundation",
       "durationSeconds": 596,
       "publishedAt": "2008-05-30",
-      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/thumbnails/big-buck-bunny.jpg",
+      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/big-buck-bunny/thumbnail.jpg",
       "streamUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/big-buck-bunny/master.m3u8",
       "tags": ["animation", "comedy"],
       "license": {
@@ -24,7 +24,7 @@
       "creator": "Blender Foundation",
       "durationSeconds": 888,
       "publishedAt": "2010-09-30",
-      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/thumbnails/sintel.jpg",
+      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/sintel/thumbnail.jpg",
       "streamUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/sintel/master.m3u8",
       "tags": ["animation", "fantasy"],
       "license": {
@@ -41,7 +41,7 @@
       "creator": "Blender Foundation",
       "durationSeconds": 734,
       "publishedAt": "2012-09-26",
-      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/thumbnails/tears-of-steel.jpg",
+      "thumbnailUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/tears-of-steel/thumbnail.jpg",
       "streamUrl": "https://pub-ccc81773052c4e64b5db10913b0f0739.r2.dev/tears-of-steel/master.m3u8",
       "tags": ["live-action", "sci-fi"],
       "license": {
