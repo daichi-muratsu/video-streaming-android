@@ -1,4 +1,6 @@
 pluginManagement {
+    // Convention Plugin（build-logic）を読み込む
+    includeBuild("build-logic")
     repositories {
         google {
             content {

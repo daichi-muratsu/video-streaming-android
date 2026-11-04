@@ -110,3 +110,11 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room3", version.ref = "room" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+
+# Convention Plugin（build-logic）
+videostreaming-android-application = { id = "videostreaming.android.application" }
+videostreaming-android-library = { id = "videostreaming.android.library" }
+videostreaming-jvm-library = { id = "videostreaming.jvm.library" }
+videostreaming-android-compose = { id = "videostreaming.android.compose" }
+videostreaming-hilt = { id = "videostreaming.hilt" }
+videostreaming-android-feature = { id = "videostreaming.android.feature" }
