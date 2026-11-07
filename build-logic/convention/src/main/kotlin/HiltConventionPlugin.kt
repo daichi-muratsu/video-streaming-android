@@ -1,5 +1,5 @@
-import io.github.daichimuratsu.videostreaming.buildlogic.libs
 import io.github.daichimuratsu.videostreaming.buildlogic.library
+import io.github.daichimuratsu.videostreaming.buildlogic.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies

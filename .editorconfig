@@ -1,0 +1,11 @@
+root = true
+
+# SpotlessがktlintでKotlinのコードをチェックするときに使う設定
+[*.{kt,kts}]
+# Android Studioの標準のフォーマッタと競合しないスタイル
+ktlint_code_style = android_studio
+# 行を追加したときの差分を1行で済ませるため、末尾のカンマを使う
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+# Composable関数は大文字で始めるため、関数名のルールから外す
+ktlint_function_naming_ignore_when_annotated_with = Composable
