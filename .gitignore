@@ -9,3 +9,5 @@
 .cxx
 local.properties
 /.kotlin
+CLAUDE.local.md
+.claude/settings.local.json

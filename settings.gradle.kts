@@ -1,4 +1,6 @@
 pluginManagement {
+    // Convention Plugin（build-logic）を読み込む
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -24,3 +26,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "VideoStreaming"
 include(":app")
+include(":feature:videolist")
+include(":feature:player")
+include(":core:domain")
+include(":core:data")
+include(":core:ui")
