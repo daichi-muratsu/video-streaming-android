@@ -4,7 +4,7 @@ import com.android.build.api.dsl.CommonExtension
 
 /**
  * Android Lintの設定。
- * 警告が増えても気づけるよう、警告をエラーとして扱い、CIで失敗させる
+ * 警告が増えても気づけるよう、警告をエラーとして扱い、ビルドを失敗させる（手元でもCIでも）
  */
 internal fun CommonExtension.configureAndroidLint() {
     lint.apply {
@@ -17,7 +17,9 @@ internal fun CommonExtension.configureAndroidLint() {
                 "AndroidGradlePluginVersion",
                 "GradleDependency",
                 "NewerVersionAvailable",
-                // lifecycle 2.11.0に入っているLintのチェックが、今のLintにないAPIを参照している
+                // lifecycle 2.11.0に入っているLintのチェックが、今のLintにないAPIを参照しているため。
+                // ほかのライブラリのチェックがスキップされてもHintになるので、AGPを上げたときはレポートを確かめる。
+                // lifecycleが直ったら外す
                 "ObsoleteLintCustomCheck",
             )
     }
