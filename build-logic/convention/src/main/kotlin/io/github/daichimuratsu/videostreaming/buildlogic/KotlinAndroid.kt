@@ -18,6 +18,7 @@ internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension) {
         compileSdk { version = release(COMPILE_SDK) }
         defaultConfig.minSdk = MIN_SDK
         defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        configureAndroidLint()
     }
     configureKotlinJvm()
     configureKotest()
