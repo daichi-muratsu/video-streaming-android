@@ -1,6 +1,7 @@
 root = true
 
 # SpotlessがktlintでKotlinのコードをチェックするときに使う設定
+# 変えたら、先に`./gradlew --stop`でGradleのデーモンを止める。止めないと、古い設定のままチェックされる（https://github.com/diffplug/spotless/issues/1924）
 [*.{kt,kts}]
 # Android Studioの標準のフォーマッタと競合しないスタイル
 ktlint_code_style = android_studio
