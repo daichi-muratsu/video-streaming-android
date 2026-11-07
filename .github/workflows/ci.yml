@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  # `main`だけに絞り、PRのブランチへのpushで2回動かないようにする。
+  # `main`のCIは、PRのCIが読むGradleのキャッシュを保存する役目もある
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # `main`では止めない。途中で止めると、キャッシュが保存されないことがあるため
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# 必要なのはコードの取得だけ。書かなかった権限は、すべて「なし」になる
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # デフォルトの360分のままだと、ビルドが止まったときに無料枠を大きく使うため
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # Gradleのデーモンは25、コンパイルのツールチェーンは17を使う。
+      # 最後に書いたバージョンが`JAVA_HOME`になるので、25を後に書く
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            25
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      # 手元のチェックと同じコマンドにする。
+      # `--continue`で、Lintが失敗してもテストを実行し、1回で両方の結果がわかるようにする
+      - run: ./gradlew build --continue
+
+      # ランナーはジョブが終わると消えるので、失敗の原因を確かめるためのレポートを残す
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: reports
+          path: '**/build/reports/'
+          retention-days: 7
