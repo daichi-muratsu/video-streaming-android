@@ -23,6 +23,12 @@ android {
 }
 
 dependencies {
+    // 画面遷移を`:app`で組み立てるため、featureモジュールに依存する
+    implementation(project(":feature:videolist"))
+    implementation(project(":feature:player"))
+    // HiltでRepositoryのinterfaceと実装を結び付けるため、Data層にも依存する
+    implementation(project(":core:data"))
+
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.ui)

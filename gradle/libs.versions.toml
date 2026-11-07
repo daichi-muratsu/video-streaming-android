@@ -95,7 +95,7 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 # Lint
 compose-lint-checks = { group = "com.slack.lint.compose", name = "compose-lint-checks", version.ref = "composeLints" }
 
-# Gradleプラグイン（build-logic・ルートのbuildscript用）
+# Gradleプラグイン（build-logic用）
 android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 spotless-gradle-plugin = { group = "com.diffplug.spotless", name = "spotless-plugin-gradle", version.ref = "spotless" }

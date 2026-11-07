@@ -26,3 +26,8 @@ dependencyResolutionManagement {
 
 rootProject.name = "VideoStreaming"
 include(":app")
+include(":feature:videolist")
+include(":feature:player")
+include(":core:domain")
+include(":core:data")
+include(":core:ui")
