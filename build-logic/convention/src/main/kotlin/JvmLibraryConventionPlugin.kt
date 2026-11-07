@@ -1,3 +1,4 @@
+import io.github.daichimuratsu.videostreaming.buildlogic.configureKotest
 import io.github.daichimuratsu.videostreaming.buildlogic.configureKotlinJvm
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -11,6 +12,7 @@ class JvmLibraryConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("org.jetbrains.kotlin.jvm")
             configureKotlinJvm()
+            configureKotest()
         }
     }
 }

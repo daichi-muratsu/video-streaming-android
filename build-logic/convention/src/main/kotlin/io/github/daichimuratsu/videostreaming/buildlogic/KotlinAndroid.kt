@@ -20,6 +20,7 @@ internal fun Project.configureKotlinAndroid(commonExtension: CommonExtension) {
         defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     configureKotlinJvm()
+    configureKotest()
 }
 
 /** JVMツールチェーンを設定する。sourceCompatibility・targetCompatibility・jvmTargetも、このバージョンに揃う */

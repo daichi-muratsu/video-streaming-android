@@ -9,3 +9,5 @@ ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
 # Composable関数は大文字で始めるため、関数名のルールから外す
 ktlint_function_naming_ignore_when_annotated_with = Composable
+# Kotestのテストを`class XxxTest : FunSpec({`と1行で書くため（Kotest公式のドキュメントと同じ書き方）
+ktlint_standard_class-signature = disabled
