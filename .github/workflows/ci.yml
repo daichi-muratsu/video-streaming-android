@@ -1,5 +1,6 @@
 name: CI
 
+# `paths-ignore`を入れない。必須のチェックにしたとき、CIが動かないPRはマージできなくなるため
 on:
   pull_request:
   # `main`だけに絞り、PRのブランチへのpushで2回動かないようにする。

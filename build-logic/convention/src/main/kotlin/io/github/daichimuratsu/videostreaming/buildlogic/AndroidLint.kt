@@ -9,7 +9,8 @@ import com.android.build.api.dsl.CommonExtension
 internal fun CommonExtension.configureAndroidLint() {
     lint.apply {
         warningsAsErrors = true
-        // 次の警告は、CIを止めずにレポートに情報として残す
+        // 次の警告は、CIを止めずにレポートに情報として残す。
+        // 警告はまず直す。ここに追加するのは、コードを変えなくても結果が変わる・自分では直せない、のような理由があるときだけ
         informational +=
             listOf(
                 // ネットワーク上の最新のバージョンと比べるため、コードを変えなくても結果が変わる。

@@ -19,7 +19,9 @@ plugins {
 
 // すべてのモジュールとbuild-logicのファイルを、ルートでまとめてktlintでチェックする。
 // ktlintのルールは`.editorconfig`で設定する。
-// 対象はモジュールのフォルダから書く。`**`で全体をたどると、ビルド中の`build/`まで読みに行って失敗するため
+// 対象はモジュールのフォルダから書く。`**`で全体をたどると、ビルド中の`build/`まで読みに行って失敗するため。
+// 新しいトップレベルのフォルダ（例：`benchmark/`）にモジュールを作ったら、`moduleDirs`に追加する。追加しないと、何も言われずにチェックから漏れる。
+// Spotlessは各モジュールに適用しない。下の不具合で、`clean build`がときどき失敗するため
 spotless {
     val moduleDirs = listOf("app", "core/*", "feature/*", "build-logic/convention")
     kotlin {
