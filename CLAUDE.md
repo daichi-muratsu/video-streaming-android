@@ -10,7 +10,7 @@
   - `:core:domain`：`./gradlew :core:domain:test --tests "<クラスの完全修飾名>"`
   - Androidモジュール：`./gradlew :<モジュール>:testDebugUnitTest --tests "<クラスの完全修飾名>"`（例：`:feature:player`）
 
-<!-- `--tests`でKotestのクラスを絞り込めるかは、まだ確かめていない。最初のテストを書いたときに確かめる -->
+<!-- Androidモジュールの`--tests`でKotestのクラスを絞り込めるかは、まだ確かめていない。最初のテストを書いたときに確かめる -->
 
 ## 設計のルール
 
