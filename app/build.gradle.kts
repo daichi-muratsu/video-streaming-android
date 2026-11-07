@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.videostreaming.android.application)
     alias(libs.plugins.videostreaming.android.compose)
+    alias(libs.plugins.videostreaming.hilt)
 }
 
 android {
