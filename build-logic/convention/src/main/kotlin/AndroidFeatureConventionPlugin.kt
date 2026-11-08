@@ -18,6 +18,8 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             dependencies {
                 add("implementation", project(":core:domain"))
                 add("implementation", project(":core:ui"))
+                // 画面をMaterial 3の部品で作るため。`:core:ui`は、テーマの関数の引数などに`material3`の型を出していないので、`api`で渡さずにここで追加する
+                add("implementation", libs.library("androidx-compose-material3"))
                 add("implementation", libs.library("androidx-lifecycle-runtime-compose"))
                 add("implementation", libs.library("androidx-lifecycle-viewmodel-compose"))
                 add("implementation", libs.library("androidx-hilt-lifecycle-viewmodel-compose"))
