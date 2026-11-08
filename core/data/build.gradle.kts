@@ -7,6 +7,14 @@ plugins {
 
 android {
     namespace = "io.github.daichimuratsu.videostreaming.core.data"
+
+    sourceSets {
+        getByName("test") {
+            // 本物の`videos.json`を変換できることを確かめるため、コピーせずに参照する。
+            // パスで読むとGradleがテストの入力として扱わず、JSONだけを直したときにテストが実行されないことがある
+            resources.directories.add(rootProject.file("data").path)
+        }
+    }
 }
 
 // スキーマのJSONをコミットし、テーブルを変えるときの自動マイグレーションと、PRでの差分の確認に使う
@@ -27,4 +35,13 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.sqlite.bundled)
+
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+
+    // DAOのテストは、Robolectricではなく端末で動かす（公式がRobolectricを推奨していないため）
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.turbine)
 }
