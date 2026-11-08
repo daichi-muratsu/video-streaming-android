@@ -20,6 +20,7 @@
 - ドメインルール（例：90%以上再生したら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
 - UseCaseは、ドメインルールを使うときか、複数のRepositoryを組み合わせるときだけ作る。Repositoryを呼ぶだけのUseCaseは作らない
 - ネットにつなぐモジュールは、自分のマニフェストに`INTERNET`の権限を書く（例：`:core:data`）。権限はアプリ全体に与えられるので、書き忘れても動いてしまい、気づけないため
+- モジュールの依存関係は`implementation`にする。公開する関数の引数・戻り値にそのモジュールの型が出てくるときだけ`api`にする（例：featureモジュールの`:core:domain`。`VideoListRoute`の引数に`VideoId`が出てくるため）
 
 ### Domain層
 
@@ -45,8 +46,13 @@
 - ViewModelは`StateFlow<UiState>`を公開し、画面からの操作は関数で受け取る
 - `UiState`で、読み込み中・成功・エラー・空の状態を表す
 - 画面は`XxxRoute`と`XxxScreen`に分ける。`XxxRoute`がViewModelとつなぎ、`XxxScreen`は状態を受け取って表示するだけにする
-
-<!-- 一覧画面を作ったら、実際のファイル名とUiStateの例を追記する -->
+- `UiState`は`sealed interface`で作る（例：`VideoListUiState`）。「読み込み中かつエラー」のような組み合わせを作れないようにするため。空の一覧は`Empty`で表し、`Success`に入れない
+- ViewModelは、UseCaseの`Flow`を`stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), …)`で公開し、画面は`collectAsStateWithLifecycle`で受け取る。画面が見えないあいだは受け取りを止めるため。`init`で読み込みを始めない（例：`VideoListViewModel`）
+- 失敗は`Flow`の`catch`で`UiState`にする。`try`〜`catch (e: Exception)`は`CancellationException`まで受け止めるので使わない。再読み込みは、合図の`Flow`から`flatMapLatest`で作り直し、`catch`は`flatMapLatest`の内側に置く。外側に置くと、失敗したときに合図を受け取る`Flow`ごと終わり、再読み込みが効かなくなるため
+- ドメインモデルを画面用のクラスに写さない。組み合わせ・判定はDomain層で済ませ、表示の形式（再生時間の`9:56`など）は画面側の関数で整える（例：`formatDuration`）
+- 文言はfeatureモジュールの`strings.xml`に置き、名前の先頭にモジュールの接頭辞を付ける（例：`video_list_`）。リソースはアプリ全体で1つにまとめられ、名前が重なると上書きされるため
+- テーマは`:core:ui`の`VideoStreamingTheme`を使う。プレビューは`@PreviewLightDark`で明暗の両方を作り、`VideoStreamingTheme(dynamicColor = false)`で囲む（壁紙で色が変わらないようにするため）。プレビューのデータは1か所にまとめる（例：`previewVideos`）
+- 画面遷移は`:app`の`VideoStreamingNavDisplay`でつなぐ。キーは`@Serializable`の`NavKey`にし、`rememberViewModelStoreNavEntryDecorator()`でViewModelを画面ごとに作る
 
 ### 再生
 
@@ -61,6 +67,8 @@
 - Kotest（FunSpec）で書く。JUnit 4は、Androidの環境が必要なもの（Compose UI Test、RoomのDAO）だけに使う
 - モックのライブラリは使わず、Fakeを書いて差し替える
 - ViewModelのテストは、kotlinx-coroutines-testとTurbineを使う
+- ViewModelのテストでは、`MainDispatcherExtension`を`extension(…)`で適用してMainを差し替え、Turbineで受け取るテストの本体を`runTest`で包む。包まないと、テスト用のディスパッチャーに渡した処理が実行されず、次の値を待ち続けるため（例：`VideoListViewModelTest`）
+- 読み込み中を挟むかを確かめるときは、Fakeの取得に時間をかける（`FakeVideoRepository.fetchDelay`）。すぐに返すと、`StateFlow`が途中の値を飛ばし、テストが見逃すため
 - ドメインルールは、結果が同じになる範囲ごとに、両端の値（境界値）と中の値（代表値）をテストに書いて確かめる
 - Fakeは、使うモジュールの`src/test`の`fake`パッケージに置く（例：`:core:data`の`FakeVideoApi`）
 - ほかのモジュールのテストでも使うFakeは、`src/testFixtures`の`fake`パッケージに置く（例：`:core:domain`の`FakePlaybackPositionRepository`）。`src/test`の中身は、ほかのモジュールから参照できないため。使う側は`testImplementation(testFixtures(project(":core:domain")))`で依存関係を追加する
