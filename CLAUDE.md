@@ -17,7 +17,7 @@
 - 依存の向きは「UI層 → Domain層 ← Data層」。Repositoryのinterfaceは`:core:domain`、実装は`:core:data`に置く
 - `:core:domain`は純粋なKotlinにする。Androidのクラスと依存関係を使わない
 - featureモジュール同士は依存させない。画面遷移は`:app`でつなぐ
-- 値オブジェクトは`value class`で作る（`VideoId`、`PlaybackPosition`など）
+- 値オブジェクトは、1つの値なら`value class`、複数の値なら`data class`で作る（`VideoId`、`PlaybackPosition`、`License`など）
 - ドメインルール（例：95%以上見たら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
 - UseCaseは、ドメインルールを使うときか、複数のRepositoryを組み合わせるときだけ作る。Repositoryを呼ぶだけのUseCaseは作らない
 
@@ -62,6 +62,7 @@
 - 一般的な語に英語を混ぜない（×ライブラリのPlugin）。固有名（Convention Plugin、Version Catalogなど）はそのまま書く
 - 記号：並列は「・」、括弧は全角の（）、コードの要素はバッククォートで囲む
 - コードのコメントは「なぜそうしたか」を書く。文末は常体（〜する）か体言止め
+- KDocは、1段落目に何を表すかを1文で書き（例：「動画の長さを表す値オブジェクト。」）、空行のあとに理由を書く
 
 ## 注意点
 
