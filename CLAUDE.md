@@ -21,6 +21,15 @@
 - ドメインルール（例：90%以上再生したら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
 - UseCaseは、ドメインルールを使うときか、複数のRepositoryを組み合わせるときだけ作る。Repositoryを呼ぶだけのUseCaseは作らない
 
+### Domain層
+
+- パッケージは`model`（値オブジェクト・エンティティ・ドメインルール）・`repository`（interface）・`usecase`に分ける
+- 値オブジェクトは、正しく作れば起きない値（負の再生位置など）を`init`の`require`で止める
+- 再生位置・長さは`Duration`で持つ。秒・ミリ秒との変換は、取得元との境界（Data層でJSONを変換するところ、`Player`の値を変換するところ）だけで行う
+- 視聴状態の判定は`WatchStatus.of`の1か所で行う。一覧画面の表示と再生を始める位置は、どちらもこの結果を使う
+- Repositoryは、1回だけの操作を`suspend`、変わり続けるデータを`Flow`にする。`Flow`を返す関数は`observe`で始める。取得の失敗は例外で伝え、該当するデータがない場合は`null`を返す
+- UseCaseは`@Inject constructor`と`operator fun invoke`で作る（例：`GetResumePositionUseCase`）
+
 ### UI層
 
 - ViewModelは`StateFlow<UiState>`を公開し、画面からの操作は関数で受け取る
@@ -43,8 +52,8 @@
 - モックのライブラリは使わず、Fakeを書いて差し替える
 - ViewModelのテストは、kotlinx-coroutines-testとTurbineを使う
 - ドメインルールは、結果が同じになる範囲ごとに、両端の値（境界値）と中の値（代表値）をテストに書いて確かめる
-
-<!-- 最初のテストを書いたら、Kotestのテストの例を追記する -->
+- Fakeは、使うモジュールの`src/test`の`fake`パッケージに置く（例：`:core:domain`の`FakePlaybackPositionRepository`）
+- 書き方の例：`WatchStatusTest`（範囲ごとに`context`で分ける）、`GetVideoListWithWatchStatusUseCaseTest`（`Flow`をTurbineで確かめる）
 
 ## コミット・PR
 
