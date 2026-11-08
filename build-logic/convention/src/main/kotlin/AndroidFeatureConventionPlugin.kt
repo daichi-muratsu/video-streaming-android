@@ -21,6 +21,11 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.library("androidx-lifecycle-runtime-compose"))
                 add("implementation", libs.library("androidx-lifecycle-viewmodel-compose"))
                 add("implementation", libs.library("androidx-hilt-lifecycle-viewmodel-compose"))
+
+                // ViewModelのテストで、RepositoryのFakeを使い、`viewModelScope`のMainをテスト用のディスパッチャーに差し替え、`StateFlow`をTurbineで受け取るため
+                add("testImplementation", testFixtures(project(":core:domain")))
+                add("testImplementation", libs.library("kotlinx-coroutines-test"))
+                add("testImplementation", libs.library("turbine"))
             }
         }
     }

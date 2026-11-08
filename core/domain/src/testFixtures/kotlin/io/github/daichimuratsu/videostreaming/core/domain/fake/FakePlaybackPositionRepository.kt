@@ -17,6 +17,10 @@ class FakePlaybackPositionRepository(
 ) : PlaybackPositionRepository {
     private val positions = MutableStateFlow(initial)
 
+    /** `observePositions`を受け取っている数。画面が見えないあいだに受け取りが止まることを、テストで確かめるために使う。 */
+    val subscriptionCount: Int
+        get() = positions.subscriptionCount.value
+
     override fun observePositions(): Flow<Map<VideoId, PlaybackPosition>> = positions
 
     override suspend fun getPosition(id: VideoId): PlaybackPosition? = positions.value[id]
