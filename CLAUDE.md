@@ -18,7 +18,7 @@
 - `:core:domain`は純粋なKotlinにする。Androidのクラスと依存関係を使わない
 - featureモジュール同士は依存させない。画面遷移は`:app`でつなぐ
 - 値オブジェクトは、1つの値なら`value class`、複数の値なら`data class`で作る（`VideoId`、`PlaybackPosition`、`License`など）
-- ドメインルール（例：95%以上見たら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
+- ドメインルール（例：90%以上再生したら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
 - UseCaseは、ドメインルールを使うときか、複数のRepositoryを組み合わせるときだけ作る。Repositoryを呼ぶだけのUseCaseは作らない
 
 ### UI層
@@ -42,7 +42,7 @@
 - Kotest（FunSpec）で書く。JUnit 4は、Androidの環境が必要なもの（Compose UI Test、RoomのDAO）だけに使う
 - モックのライブラリは使わず、Fakeを書いて差し替える
 - ViewModelのテストは、kotlinx-coroutines-testとTurbineを使う
-- ドメインルールの境界値は、プロパティベーステスト（kotest-property）でも確かめる
+- ドメインルールは、結果が同じになる範囲ごとに、両端の値（境界値）と中の値（代表値）をテストに書いて確かめる
 
 <!-- 最初のテストを書いたら、Kotestのテストの例を追記する -->
 
