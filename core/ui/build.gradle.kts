@@ -6,3 +6,7 @@ plugins {
 android {
     namespace = "io.github.daichimuratsu.videostreaming.core.ui"
 }
+
+dependencies {
+    implementation(libs.androidx.compose.material3)
+}

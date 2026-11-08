@@ -16,11 +16,19 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             pluginManager.apply("videostreaming.hilt")
 
             dependencies {
-                add("implementation", project(":core:domain"))
+                // `api`にする。画面が公開する関数の引数（`onVideoClick: (VideoId) -> Unit`など）に、Domain層の型が出てくるため
+                add("api", project(":core:domain"))
                 add("implementation", project(":core:ui"))
+                // 画面をMaterial 3の部品で作るため。`:core:ui`は、テーマの関数の引数などに`material3`の型を出していないので、`api`で渡さずにここで追加する
+                add("implementation", libs.library("androidx-compose-material3"))
                 add("implementation", libs.library("androidx-lifecycle-runtime-compose"))
                 add("implementation", libs.library("androidx-lifecycle-viewmodel-compose"))
                 add("implementation", libs.library("androidx-hilt-lifecycle-viewmodel-compose"))
+
+                // ViewModelのテストで、RepositoryのFakeを使い、`viewModelScope`のMainをテスト用のディスパッチャーに差し替え、`StateFlow`をTurbineで受け取るため
+                add("testImplementation", testFixtures(project(":core:domain")))
+                add("testImplementation", libs.library("kotlinx-coroutines-test"))
+                add("testImplementation", libs.library("turbine"))
             }
         }
     }

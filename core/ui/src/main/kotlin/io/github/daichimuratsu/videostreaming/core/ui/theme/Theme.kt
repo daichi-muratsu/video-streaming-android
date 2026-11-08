@@ -1,6 +1,5 @@
-package io.github.daichimuratsu.videostreaming.ui.theme
+package io.github.daichimuratsu.videostreaming.core.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -11,32 +10,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-)
-
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-     */
-)
-
+/**
+ * アプリ全体の色と文字のスタイルを決めるテーマ。
+ *
+ * featureモジュールのプレビューでも本番と同じテーマを使えるように、`:app`ではなく`:core:ui`に置く。
+ * Dynamic Color（壁紙から作る色）はAndroid 12以上でしか使えないので、それより前の端末ではMaterial 3の標準の配色を使う
+ */
 @Composable
 fun VideoStreamingTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
@@ -46,14 +28,13 @@ fun VideoStreamingTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> DarkColorScheme
+        darkTheme -> darkColorScheme()
 
-        else -> LightColorScheme
+        else -> lightColorScheme()
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
         content = content,
     )
 }

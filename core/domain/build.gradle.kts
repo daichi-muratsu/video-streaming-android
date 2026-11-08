@@ -1,5 +1,8 @@
 plugins {
     alias(libs.plugins.videostreaming.jvm.library)
+    // RepositoryのFakeを`src/testFixtures`に置き、featureモジュールのテストでも使うため。
+    // `src/test`の中身は、ほかのモジュールから参照できない
+    `java-test-fixtures`
 }
 
 dependencies {
