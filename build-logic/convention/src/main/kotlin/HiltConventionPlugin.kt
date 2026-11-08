@@ -14,6 +14,13 @@ class HiltConventionPlugin : Plugin<Project> {
             dependencies {
                 add("implementation", libs.library("hilt-android"))
                 add("ksp", libs.library("hilt-compiler"))
+
+                // `hilt-android`は、古い`androidx.core`などを経由して`annotation-experimental`の1.3.1を持ち込む。
+                // 1.3.1のLintのチェックには、Kotlinのファイルにも`RequiresOptIn`のチェックを行う不具合がある（1.4.1で修正）。
+                // この不具合で、Android Studioが`@Serializable`のクラスに`InternalSerializationApi`のエラーを表示するため、バージョンだけを上げる
+                constraints {
+                    add("implementation", libs.library("androidx-annotation-experimental"))
+                }
             }
         }
     }
