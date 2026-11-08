@@ -8,9 +8,8 @@
 - ktlintの指摘を直す：`./gradlew spotlessApply`
 - 1つのテストクラスだけ実行する
   - `:core:domain`：`./gradlew :core:domain:test --tests "<クラスの完全修飾名>"`
-  - Androidモジュール：`./gradlew :<モジュール>:testDebugUnitTest --tests "<クラスの完全修飾名>"`（例：`:feature:player`）
-
-<!-- Androidモジュールの`--tests`でKotestのクラスを絞り込めるかは、まだ確かめていない。最初のテストを書いたときに確かめる -->
+  - Androidモジュール：`./gradlew :<モジュール>:testDebugUnitTest --tests "<クラスの完全修飾名>"`（例：`:core:data`）
+- 端末のテスト（`src/androidTest`）：`./gradlew :<モジュール>:connectedDebugAndroidTest`（実機かエミュレーターが必要。CIでは実行しないので、push前に手元で実行する）
 
 ## 設計のルール
 
@@ -20,6 +19,7 @@
 - 値オブジェクトは、1つの値なら`value class`、複数の値なら`data class`で作る（`VideoId`、`PlaybackPosition`、`License`など）
 - ドメインルール（例：90%以上再生したら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
 - UseCaseは、ドメインルールを使うときか、複数のRepositoryを組み合わせるときだけ作る。Repositoryを呼ぶだけのUseCaseは作らない
+- ネットにつなぐモジュールは、自分のマニフェストに`INTERNET`の権限を書く（例：`:core:data`）。権限はアプリ全体に与えられるので、書き忘れても動いてしまい、気づけないため
 
 ### Domain層
 
@@ -29,6 +29,16 @@
 - 視聴状態の判定は`WatchStatus.of`の1か所で行う。一覧画面の表示と再生を始める位置は、どちらもこの結果を使う
 - Repositoryは、1回だけの操作を`suspend`、変わり続けるデータを`Flow`にする。`Flow`を返す関数は`observe`で始める。取得の失敗は例外で伝え、該当するデータがない場合は`null`を返す
 - UseCaseは`@Inject constructor`と`operator fun invoke`で作る（例：`GetResumePositionUseCase`）
+
+### Data層
+
+- パッケージは取得先ごとに`network`（Retrofitのinterface・DTO）・`database`（RoomのDatabase・DAO・Entity）・`repository`（Repositoryの実装）・`di`（HiltのModule）に分ける
+- クラスは`internal`にする。ほかのモジュールが使うのは、`:core:domain`のRepositoryのinterfaceだけにする
+- DTO・Entityはドメインモデルと別のクラスにし、変換は変換元と同じファイルの拡張関数`toDomain()`で書く（例：`VideoDto.toDomain()`、`PlaybackPositionEntity.toDomain()`）。変換の失敗は例外のまま投げる
+- DTOの項目に既定値を付けない。JSONに項目がないときに、変換の時点で失敗させるため。JSONの変換には`networkJson`（`ignoreUnknownKeys = true`）だけを使う
+- Retrofitのinterface・DAOとRepositoryの間に、DataSourceのinterfaceを作らない。取得先が1つずつで、呼び出しを中継するだけのクラスになるため。テストでは、Retrofitのinterface・DAOを直接Fakeにする
+- DAOの関数は、DBの操作で名前を付ける（`upsert`・`getByVideoId`・`observeAll`）。上書きには`@Upsert`を使う（`@Insert(onConflict = REPLACE)`は、既存の行を削除してから挿入するため）
+- Roomの列名には単位を入れる（例：`position_millis`）。テーブルを変えるときは`version`を上げ、`core/data/schemas/`に書き出されるスキーマのJSONもコミットする
 
 ### UI層
 
@@ -53,7 +63,9 @@
 - ViewModelのテストは、kotlinx-coroutines-testとTurbineを使う
 - ドメインルールは、結果が同じになる範囲ごとに、両端の値（境界値）と中の値（代表値）をテストに書いて確かめる
 - Fakeは、使うモジュールの`src/test`の`fake`パッケージに置く（例：`:core:domain`の`FakePlaybackPositionRepository`）
-- 書き方の例：`WatchStatusTest`（範囲ごとに`context`で分ける）、`GetVideoListWithWatchStatusUseCaseTest`（`Flow`をTurbineで確かめる）
+- RoomのDAOのテストは`src/androidTest`に置き、メモリ上のデータベースとアプリと同じ`BundledSQLiteDriver`で確かめる（例：`PlaybackPositionDaoTest`）。公式がRobolectricでのテストを推奨していないため
+- JUnit 4のテストの関数名は、日本語をバッククォートで囲む（ktlintの`function-naming`が、囲まない日本語の関数名を指摘するため）。空白は入れない（空白を含む関数名は、AndroidではAPI level 30以上でしか使えず、`minSdk`は26のため）
+- 書き方の例：`WatchStatusTest`（範囲ごとに`context`で分ける）、`GetVideoListWithWatchStatusUseCaseTest`（`Flow`をTurbineで確かめる）、`VideoRepositoryImplTest`（Fakeの呼ばれた回数でキャッシュを確かめる）
 
 ## コミット・PR
 
