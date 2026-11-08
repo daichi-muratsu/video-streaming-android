@@ -7,11 +7,12 @@ import io.github.daichimuratsu.videostreaming.core.domain.repository.VideoReposi
 /**
  * テスト用の`VideoRepository`。
  *
- * `error`を指定すると、取得の失敗を再現するため、その例外を投げる
+ * `error`に例外を入れると、取得の失敗を再現するために、その例外を投げる。
+ * テストの途中で`error`を`null`に戻せるようにし、失敗したあとの再読み込みで取得できることを確かめる
  */
 class FakeVideoRepository(
     private val videos: List<Video>,
-    private val error: Throwable? = null,
+    var error: Throwable? = null,
 ) : VideoRepository {
     override suspend fun getVideos(): List<Video> {
         error?.let { throw it }
