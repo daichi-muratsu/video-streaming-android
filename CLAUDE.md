@@ -10,16 +10,25 @@
   - `:core:domain`：`./gradlew :core:domain:test --tests "<クラスの完全修飾名>"`
   - Androidモジュール：`./gradlew :<モジュール>:testDebugUnitTest --tests "<クラスの完全修飾名>"`（例：`:feature:player`）
 
-<!-- `--tests`でKotestのクラスを絞り込めるかは、まだ確かめていない。最初のテストを書いたときに確かめる -->
+<!-- Androidモジュールの`--tests`でKotestのクラスを絞り込めるかは、まだ確かめていない。最初のテストを書いたときに確かめる -->
 
 ## 設計のルール
 
 - 依存の向きは「UI層 → Domain層 ← Data層」。Repositoryのinterfaceは`:core:domain`、実装は`:core:data`に置く
 - `:core:domain`は純粋なKotlinにする。Androidのクラスと依存関係を使わない
 - featureモジュール同士は依存させない。画面遷移は`:app`でつなぐ
-- 値オブジェクトは`value class`で作る（`VideoId`、`PlaybackPosition`など）
-- ドメインルール（例：95%以上見たら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
+- 値オブジェクトは、1つの値なら`value class`、複数の値なら`data class`で作る（`VideoId`、`PlaybackPosition`、`License`など）
+- ドメインルール（例：90%以上再生したら、次は最初から再生する）は`:core:domain`に書く。ViewModelやRepositoryの実装に書かない
 - UseCaseは、ドメインルールを使うときか、複数のRepositoryを組み合わせるときだけ作る。Repositoryを呼ぶだけのUseCaseは作らない
+
+### Domain層
+
+- パッケージは`model`（値オブジェクト・エンティティ・ドメインルール）・`repository`（interface）・`usecase`に分ける
+- 値オブジェクトは、正しく作れば起きない値（負の再生位置など）を`init`の`require`で止める
+- 再生位置・長さは`Duration`で持つ。秒・ミリ秒との変換は、取得元との境界（Data層でJSONを変換するところ、`Player`の値を変換するところ）だけで行う
+- 視聴状態の判定は`WatchStatus.of`の1か所で行う。一覧画面の表示と再生を始める位置は、どちらもこの結果を使う
+- Repositoryは、1回だけの操作を`suspend`、変わり続けるデータを`Flow`にする。`Flow`を返す関数は`observe`で始める。取得の失敗は例外で伝え、該当するデータがない場合は`null`を返す
+- UseCaseは`@Inject constructor`と`operator fun invoke`で作る（例：`GetResumePositionUseCase`）
 
 ### UI層
 
@@ -42,9 +51,9 @@
 - Kotest（FunSpec）で書く。JUnit 4は、Androidの環境が必要なもの（Compose UI Test、RoomのDAO）だけに使う
 - モックのライブラリは使わず、Fakeを書いて差し替える
 - ViewModelのテストは、kotlinx-coroutines-testとTurbineを使う
-- ドメインルールの境界値は、プロパティベーステスト（kotest-property）でも確かめる
-
-<!-- 最初のテストを書いたら、Kotestのテストの例を追記する -->
+- ドメインルールは、結果が同じになる範囲ごとに、両端の値（境界値）と中の値（代表値）をテストに書いて確かめる
+- Fakeは、使うモジュールの`src/test`の`fake`パッケージに置く（例：`:core:domain`の`FakePlaybackPositionRepository`）
+- 書き方の例：`WatchStatusTest`（範囲ごとに`context`で分ける）、`GetVideoListWithWatchStatusUseCaseTest`（`Flow`をTurbineで確かめる）
 
 ## コミット・PR
 
@@ -57,11 +66,14 @@
 
 コードのコメント・コミット・PR・READMEは、日本語で書く。
 
-- 技術用語は、公式ドキュメントで一般的な言い方を使う（例：プラグインを「適用する」、「依存関係を追加する」、「チェックする」、「取得する」、「バージョン」）
+- 技術用語は、公式ドキュメントで一般的な言い方を使う（例：プラグインを「適用する」、「依存関係を追加する」、「チェックする」、「取得する」、「バージョン」）。その場で新しい言い方を作らない
 - 複合語は「の」でつながない（例：Androidアプリ、Kotlinバージョン）
 - 一般的な語に英語を混ぜない（×ライブラリのPlugin）。固有名（Convention Plugin、Version Catalogなど）はそのまま書く
 - 記号：並列は「・」、括弧は全角の（）、コードの要素はバッククォートで囲む
 - コードのコメントは「なぜそうしたか」を書く。文末は常体（〜する）か体言止め
+- コード・コミットの文は、正確さを優先した書き言葉で書く。話し言葉や、説明のための言い換え・例えを使わない
+- あいまいな言い方を使わない
+- KDocは、1段落目に何を表すかを1文で書き（例：「動画の長さを表す値オブジェクト。」）、空行のあとに理由を書く
 
 ## 注意点
 
