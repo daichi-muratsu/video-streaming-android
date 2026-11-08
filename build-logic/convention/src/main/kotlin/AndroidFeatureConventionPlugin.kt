@@ -16,7 +16,8 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
             pluginManager.apply("videostreaming.hilt")
 
             dependencies {
-                add("implementation", project(":core:domain"))
+                // `api`にする。画面が公開する関数の引数（`onVideoClick: (VideoId) -> Unit`など）に、Domain層の型が出てくるため
+                add("api", project(":core:domain"))
                 add("implementation", project(":core:ui"))
                 // 画面をMaterial 3の部品で作るため。`:core:ui`は、テーマの関数の引数などに`material3`の型を出していないので、`api`で渡さずにここで追加する
                 add("implementation", libs.library("androidx-compose-material3"))
