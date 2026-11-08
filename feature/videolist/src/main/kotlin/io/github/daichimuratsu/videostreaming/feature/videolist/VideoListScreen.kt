@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,11 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoWithWatchStatus
+import io.github.daichimuratsu.videostreaming.core.ui.theme.VideoStreamingTheme
 
 /**
  * 一覧画面をViewModelとつなぐ。
@@ -143,5 +146,49 @@ private fun ErrorContent(onReload: () -> Unit, modifier: Modifier = Modifier) {
         Button(onClick = onReload) {
             Text(text = stringResource(R.string.video_list_reload))
         }
+    }
+}
+
+// プレビューを本番と同じテーマで表示する。Dynamic Colorは壁紙で色が変わるので使わず、色を固定して見比べられるようにする
+@Composable
+private fun PreviewSurface(content: @Composable () -> Unit) {
+    VideoStreamingTheme(dynamicColor = false) {
+        Surface(content = content)
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun VideoListScreenSuccessPreview() {
+    PreviewSurface {
+        VideoListScreen(
+            uiState = VideoListUiState.Success(previewVideos),
+            onVideoClick = {},
+            onReload = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun VideoListScreenLoadingPreview() {
+    PreviewSurface {
+        VideoListScreen(uiState = VideoListUiState.Loading, onVideoClick = {}, onReload = {})
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun VideoListScreenErrorPreview() {
+    PreviewSurface {
+        VideoListScreen(uiState = VideoListUiState.Error, onVideoClick = {}, onReload = {})
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun VideoListScreenEmptyPreview() {
+    PreviewSurface {
+        VideoListScreen(uiState = VideoListUiState.Empty, onVideoClick = {}, onReload = {})
     }
 }
