@@ -1,0 +1,33 @@
+package io.github.daichimuratsu.videostreaming.feature.player.di
+
+import android.content.Context
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import dagger.Binds
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ViewModelComponent
+import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.daichimuratsu.videostreaming.feature.player.HlsMediaItemFactory
+import io.github.daichimuratsu.videostreaming.feature.player.MediaItemFactory
+
+/**
+ * 再生画面のViewModelに渡す`Player`と`MediaItemFactory`を提供するHiltのModule。
+ *
+ * ViewModelは`Player`インターフェースだけを受け取り、ExoPlayerの型と`Context`を知らずに済むよう、ここで作る
+ */
+@Module
+@InstallIn(ViewModelComponent::class)
+internal abstract class PlayerModule {
+    @Binds
+    abstract fun bindMediaItemFactory(factory: HlsMediaItemFactory): MediaItemFactory
+
+    companion object {
+        // スコープを付けない。ViewModelを作るたびに新しいExoPlayerを作り、そのViewModelが`onCleared`で解放する。
+        // Activityの`Context`を渡すと、回転で破棄されたActivityをExoPlayerが持ち続けるので、`ApplicationContext`にする
+        @Provides
+        fun providePlayer(@ApplicationContext context: Context): Player =
+            ExoPlayer.Builder(context).build()
+    }
+}
