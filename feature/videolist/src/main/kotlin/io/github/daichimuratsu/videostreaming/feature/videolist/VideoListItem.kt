@@ -13,7 +13,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoWithWatchStatus
 import io.github.daichimuratsu.videostreaming.core.domain.model.WatchStatus
+import io.github.daichimuratsu.videostreaming.core.ui.durationDescription
+import io.github.daichimuratsu.videostreaming.core.ui.formatDuration
 import kotlin.time.Duration
 
 /**
@@ -143,20 +144,3 @@ private fun Badge(text: String, modifier: Modifier = Modifier) {
             .padding(horizontal = 4.dp, vertical = 1.dp),
     )
 }
-
-// 読み上げ用の「9分56秒」。文言を`strings.xml`の書式から`stringResource`で作るので、Composable関数にする
-@Composable
-@ReadOnlyComposable
-private fun durationDescription(duration: Duration): String =
-    duration.toComponents { hours, minutes, seconds, _ ->
-        if (hours > 0) {
-            stringResource(
-                R.string.video_list_duration_with_hours_description,
-                hours,
-                minutes,
-                seconds,
-            )
-        } else {
-            stringResource(R.string.video_list_duration_description, minutes, seconds)
-        }
-    }

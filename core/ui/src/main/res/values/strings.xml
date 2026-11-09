@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 名前の先頭に`core_ui_`を付ける。リソースはアプリ全体で1つにまとめられ、ほかのモジュールと名前が重なると上書きされるため -->
+
+    <!-- 読み上げ用の長さ・再生位置（`durationDescription`） -->
+    <string name="core_ui_duration_description">%1$d分%2$d秒</string>
+    <string name="core_ui_duration_with_hours_description">%1$d時間%2$d分%3$d秒</string>
+</resources>

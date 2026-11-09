@@ -1,4 +1,4 @@
-package io.github.daichimuratsu.videostreaming.feature.videolist
+package io.github.daichimuratsu.videostreaming.core.testing
 
 import io.kotest.core.listeners.AfterTestListener
 import io.kotest.core.listeners.BeforeTestListener

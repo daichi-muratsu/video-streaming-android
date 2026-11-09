@@ -10,6 +10,7 @@ import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoWithWatchStatus
 import io.github.daichimuratsu.videostreaming.core.domain.model.WatchStatus
 import io.github.daichimuratsu.videostreaming.core.domain.usecase.GetVideoListWithWatchStatusUseCase
+import io.github.daichimuratsu.videostreaming.core.testing.MainDispatcherExtension
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import java.io.IOException
