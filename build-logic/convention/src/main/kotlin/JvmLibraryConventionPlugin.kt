@@ -4,7 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 
 /**
- * `:core:domain`用。Android非依存のKotlin/JVMライブラリとしてビルドする。
+ * `:core:domain`・`:core:testing`用。Android非依存のKotlin/JVMライブラリとしてビルドする。
  * Androidプラグインを適用しないため、Android APIを使うとコンパイルエラーになる
  */
 class JvmLibraryConventionPlugin : Plugin<Project> {

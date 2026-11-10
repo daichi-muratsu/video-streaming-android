@@ -1,4 +1,4 @@
-package io.github.daichimuratsu.videostreaming.feature.videolist
+package io.github.daichimuratsu.videostreaming.core.ui
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
