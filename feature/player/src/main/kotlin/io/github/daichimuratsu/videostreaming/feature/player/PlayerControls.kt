@@ -7,7 +7,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -205,16 +204,7 @@ internal fun PlayerControls(
                     onClick = onPlayPause,
                     modifier = Modifier.align(Alignment.Center),
                 )
-                Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-                    // 時間は左、全画面のボタンは右に置く（Media3の`PlayerView`のレイアウトも、全画面のボタンは下の右側）
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        PositionText(positionMs = shownPositionMs, durationMs = knownDurationMs)
-                        Spacer(modifier = Modifier.weight(1f))
-                        FullscreenButton(isFullscreen = isFullscreen, onClick = onToggleFullscreen)
-                    }
+                Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
                     SeekBar(
                         positionMs = shownPositionMs,
                         durationMs = knownDurationMs,
@@ -226,7 +216,22 @@ internal fun PlayerControls(
                             draggingPositionMs?.let(onSeek)
                             draggingPositionMs = null
                         },
+                        modifier = Modifier.align(Alignment.BottomCenter),
                     )
+                    // 時間は左、全画面のボタンは右に置く（Media3の`PlayerView`のレイアウトも、全画面のボタンは下の右側）。
+                    // シークバーの触れる範囲（48dp）の上半分に重ね、時間を線に近づける。どちらも押せる範囲は小さくしない。
+                    // シークバーより後に置き、重なったところでは全画面のボタンを優先して押せるようにする
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 4.dp, bottom = 21.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PositionText(positionMs = shownPositionMs, durationMs = knownDurationMs)
+                        Spacer(modifier = Modifier.weight(1f))
+                        FullscreenButton(isFullscreen = isFullscreen, onClick = onToggleFullscreen)
+                    }
                 }
             }
         }
@@ -343,6 +348,8 @@ private fun SeekBar(
         },
         modifier = modifier
             .fillMaxWidth()
+            // 線と丸を細く小さくしても、指で触れる範囲は48dpにする（Material 3の`Slider`は、渡した線と丸の高さになるため）
+            .height(48.dp)
             .padding(horizontal = 8.dp)
             // 割合（50%など）ではなく、再生位置として読み上げる
             .semantics { stateDescription = description },
