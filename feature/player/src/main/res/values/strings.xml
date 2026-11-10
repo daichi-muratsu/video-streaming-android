@@ -14,6 +14,8 @@
     <string name="player_pause">一時停止</string>
     <string name="player_show_controls">操作ボタンを表示</string>
     <string name="player_hide_controls">操作ボタンを隠す</string>
+    <string name="player_enter_fullscreen">全画面表示</string>
+    <string name="player_exit_fullscreen">全画面表示を終了</string>
     <string name="player_position_and_duration">%1$s / %2$s</string>
     <string name="player_position_and_duration_description">再生位置 %1$s、長さ %2$s</string>
 

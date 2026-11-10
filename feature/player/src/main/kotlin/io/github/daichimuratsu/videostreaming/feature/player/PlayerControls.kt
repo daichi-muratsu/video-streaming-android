@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -69,7 +71,12 @@ private val OnPlayerColor = Color.White
 // 状態ホルダーはMedia3の`@UnstableApi`。Composeで`Player`の状態を受け取る公式の部品のため、Media3を上げてAPIが変わったときに直す
 @OptIn(UnstableApi::class)
 @Composable
-internal fun PlayerControlsOverlay(player: Player, modifier: Modifier = Modifier) {
+internal fun PlayerControlsOverlay(
+    player: Player,
+    isFullscreen: Boolean,
+    onToggleFullscreen: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val playPauseState = rememberPlayPauseButtonState(player)
     // 実際に映像が進んでいるか（`Player.isPlaying`）。`playPauseState.showPlay`は、読み込み中でも再生する予定なら
     // 一時停止のアイコンを出す（`false`になる）ので、隠す判断には使わない
@@ -120,6 +127,11 @@ internal fun PlayerControlsOverlay(player: Player, modifier: Modifier = Modifier
         },
         onSeek = { positionMs -> player.seekTo(positionMs) },
         onInteraction = { interactionCount++ },
+        isFullscreen = isFullscreen,
+        onToggleFullscreen = {
+            onToggleFullscreen()
+            interactionCount++
+        },
         modifier = modifier,
     )
 }
@@ -160,6 +172,8 @@ internal fun PlayerControls(
     onPlayPause: () -> Unit,
     onSeek: (positionMs: Long) -> Unit,
     onInteraction: () -> Unit,
+    isFullscreen: Boolean,
+    onToggleFullscreen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // シークバーを動かしているあいだの位置。動かしているあいだは表示だけを変え、指を離したときに1回だけシークする。
@@ -192,11 +206,15 @@ internal fun PlayerControls(
                     modifier = Modifier.align(Alignment.Center),
                 )
                 Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-                    PositionText(
-                        positionMs = shownPositionMs,
-                        durationMs = knownDurationMs,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
+                    // 時間は左、全画面のボタンは右に置く（Media3の`PlayerView`のレイアウトも、全画面のボタンは下の右側）
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PositionText(positionMs = shownPositionMs, durationMs = knownDurationMs)
+                        Spacer(modifier = Modifier.weight(1f))
+                        FullscreenButton(isFullscreen = isFullscreen, onClick = onToggleFullscreen)
+                    }
                     SeekBar(
                         positionMs = shownPositionMs,
                         durationMs = knownDurationMs,
@@ -212,6 +230,27 @@ internal fun PlayerControls(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FullscreenButton(
+    isFullscreen: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 全画面中は「終了」の絵に変え、今の状態がわかるようにする
+    val (iconRes, labelRes) = if (isFullscreen) {
+        R.drawable.player_ic_fullscreen_exit to R.string.player_exit_fullscreen
+    } else {
+        R.drawable.player_ic_fullscreen to R.string.player_enter_fullscreen
+    }
+    IconButton(onClick = onClick, modifier = modifier) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = stringResource(labelRes),
+            tint = OnPlayerColor,
+        )
     }
 }
 
@@ -324,6 +363,8 @@ private fun PlayerControlsPlayingPreview() {
                 onPlayPause = {},
                 onSeek = {},
                 onInteraction = {},
+                isFullscreen = false,
+                onToggleFullscreen = {},
             )
         }
     }
@@ -343,6 +384,8 @@ private fun PlayerControlsPausedPreview() {
                 onPlayPause = {},
                 onSeek = {},
                 onInteraction = {},
+                isFullscreen = false,
+                onToggleFullscreen = {},
             )
         }
     }
