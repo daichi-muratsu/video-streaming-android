@@ -64,8 +64,10 @@
 - 画面とViewModelは`Player`インターフェースに対して書き、ExoPlayerの型に依存しない（後で`MediaController`に差し替えるため）
 - 再生中か・再生位置などの再生の状態は`UiState`に入れず、画面がMedia3の状態ホルダー（`rememberPlayPauseButtonState`など）で`Player`から受け取る。`UiState`にも持つと、`Player`と食い違うおそれがあるため
 - `MediaItem`は`MediaItemFactory`で作る（本物は`HlsMediaItemFactory`）。`MediaItem.Builder.setUri`はAndroidの`Uri.parse`を呼び、JVMのユニットテストで動かないため
-- 再生位置の保存は`PlaybackPositionTracker`に分ける。Trackerは`Player`を直接扱わず、小さなinterfaceを受け取る（Fakeでテストするため）
-- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）
+- 再生位置の保存は`PlaybackPositionTracker`に分ける。Trackerは`Player`を直接扱わず、再生位置と再生中かどうかだけの`PlaybackProgress`を受け取る（Fakeでテストするため）。`Player`との変換（ミリ秒から`Duration`、`Player.Listener`から`Flow`）は、アダプターの`PlayerPlaybackProgress`だけで行う
+- 再生位置は、再生中の10秒ごと・再生が止まったとき・画面を離れるとき（`onCleared`）に保存する。`MediaItem`を設定する前に画面を離れたときは保存しない（前に保存した位置を0で上書きするため）
+- 画面を離れたあとも続ける処理は、`@ApplicationScope`の`CoroutineScope`で行う（`viewModelScope`は`onCleared`で止まるため）。`Player`はメインスレッドで読み、書き込みだけをこのスコープで行う
+- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
 
 ## テスト
 
@@ -74,11 +76,12 @@
 - ViewModelのテストは、kotlinx-coroutines-testとTurbineを使う
 - ViewModelのテストでは、`MainDispatcherExtension`（`:core:testing`）を`extension(…)`で適用してMainを差し替え、Turbineで受け取るテストの本体を`runTest`で包む。包まないと、テスト用のディスパッチャーに渡した処理が実行されず、次の値を待ち続けるため（例：`VideoListViewModelTest`）
 - 読み込み中を挟むかを確かめるときは、Fakeの取得に時間をかける（`FakeVideoRepository.fetchDelay`）。すぐに返すと、`StateFlow`が途中の値を飛ばし、テストが見逃すため
+- 一定の間隔の処理は、仮想の時間で確かめる。`advanceTimeBy`のあとに`runCurrent`を呼ぶ（`advanceTimeBy`は、ちょうどその時刻に予定された処理を実行しないため。例：`PlaybackPositionTrackerTest`）
 - ドメインルールは、結果が同じになる範囲ごとに、両端の値（境界値）と中の値（代表値）をテストに書いて確かめる
 - Fakeは、使うモジュールの`src/test`の`fake`パッケージに置く（例：`:core:data`の`FakeVideoApi`）
 - ほかのモジュールのテストでも使うFakeは、`src/testFixtures`の`fake`パッケージに置く（例：`:core:domain`の`FakePlaybackPositionRepository`）。`src/test`の中身は、ほかのモジュールから参照できないため。使う側は`testImplementation(testFixtures(project(":core:domain")))`で依存関係を追加する
 - テスト用の道具（Fakeではないもの）は`:core:testing`に置く（例：`MainDispatcherExtension`）。featureモジュールにはConvention Pluginで`testImplementation`に追加してある
-- `Player`のFakeは、`media3-test-utils`の`StubPlayer`を継承し、使う関数だけを上書きする（例：`FakePlayer`）。プロパティの名前は`Player`の関数と重ねない（`var mediaItem`は`setMediaItem`と衝突する）
+- `Player`のFakeは、`media3-test-utils`の`StubPlayer`を継承し、使う関数だけを上書きする（例：`FakePlayer`）。プロパティの名前は`Player`の関数と重ねない（`var mediaItem`は`setMediaItem`と衝突する）。`isPlaying`は`BasePlayer`の`final`の関数なので、元になる`getPlaybackState`・`getPlayWhenReady`・`getPlaybackSuppressionReason`を上書きする
 - ViewModelの`onCleared`は、`ViewModelStore`に`ViewModelProvider.create(…)`で入れ、`ViewModelStore.clear()`で起こす（例：`PlayerViewModelTest`）。`lifecycle-viewmodel-testing`の`viewModelScenario`は、中でAndroidの`Bundle`を使い、Androidのモジュールのユニットテストで失敗するため
 - RoomのDAOのテストは`src/androidTest`に置き、メモリ上のデータベースとアプリと同じ`BundledSQLiteDriver`で確かめる（例：`PlaybackPositionDaoTest`）。公式がRobolectricでのテストを推奨していないため
 - JUnit 4のテストの関数名は、日本語をバッククォートで囲む（ktlintの`function-naming`が、囲まない日本語の関数名を指摘するため）。空白は入れない（空白を含む関数名は、AndroidではAPI level 30以上でしか使えず、`minSdk`は26のため）
