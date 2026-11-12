@@ -9,8 +9,12 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.daichimuratsu.videostreaming.core.domain.model.Video
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
+import io.github.daichimuratsu.videostreaming.core.domain.repository.PlaybackPositionRepository
 import io.github.daichimuratsu.videostreaming.core.domain.repository.VideoRepository
+import io.github.daichimuratsu.videostreaming.feature.player.di.ApplicationScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * 再生画面の状態を作り、`Player`を持つViewModel。
@@ -35,11 +40,24 @@ class PlayerViewModel @AssistedInject constructor(
     // Daggerが`Factory`の実装を作れない
     @Assisted videoId: String,
     private val videoRepository: VideoRepository,
+    playbackPositionRepository: PlaybackPositionRepository,
     private val mediaItemFactory: MediaItemFactory,
+    // 画面を離れたあとも、再生位置の最後の保存を終えるためのスコープ。`viewModelScope`は`onCleared`で止まる
+    @ApplicationScope applicationScope: CoroutineScope,
     /** 画面が映像を表示し、操作ボタンから操作する`Player`。 */
     val player: Player,
 ) : ViewModel() {
     private val videoId = VideoId(videoId)
+
+    private val positionTracker = PlaybackPositionTracker(
+        videoId = this.videoId,
+        progress = PlayerPlaybackProgress(player),
+        repository = playbackPositionRepository,
+        saveScope = applicationScope,
+    )
+
+    // 再生位置の監視。`MediaItem`を設定する前は`null`で、`onCleared`で保存するかの判定に使う
+    private var trackingJob: Job? = null
 
     // 再読み込みの合図。中身は要らないので`Unit`にする
     private val reloadRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -83,9 +101,18 @@ class PlayerViewModel @AssistedInject constructor(
         player.setMediaItem(mediaItemFactory.create(video))
         player.prepare()
         player.playWhenReady = true
+        startTracking()
+    }
+
+    private fun startTracking() {
+        if (trackingJob != null) return
+        trackingJob = viewModelScope.launch { positionTracker.track() }
     }
 
     override fun onCleared() {
+        // `MediaItem`を設定する前に離れたときは保存しない。保存すると、前に保存した位置を0で上書きするため。
+        // 位置は`Player`から読むので、解放より先に保存する
+        if (trackingJob != null) positionTracker.save()
         player.release()
     }
 

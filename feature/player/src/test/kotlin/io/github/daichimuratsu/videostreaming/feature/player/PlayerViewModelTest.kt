@@ -5,17 +5,23 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.cash.turbine.test
+import io.github.daichimuratsu.videostreaming.core.domain.fake.FakePlaybackPositionRepository
 import io.github.daichimuratsu.videostreaming.core.domain.fake.FakeVideoRepository
 import io.github.daichimuratsu.videostreaming.core.domain.fake.testVideo
+import io.github.daichimuratsu.videostreaming.core.domain.model.PlaybackPosition
+import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
 import io.github.daichimuratsu.videostreaming.core.testing.MainDispatcherExtension
 import io.github.daichimuratsu.videostreaming.feature.player.fake.FakeMediaItemFactory
 import io.github.daichimuratsu.videostreaming.feature.player.fake.FakePlayer
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import java.io.IOException
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 
 // `runTest`で包むのは、テスト用のディスパッチャーに渡した処理を、`runTest`が仮想の時間を進めて実行するため。
@@ -33,7 +39,26 @@ class PlayerViewModelTest : FunSpec({
         videos: FakeVideoRepository,
         player: FakePlayer = FakePlayer(),
         videoId: String = bigBuckBunny.id.value,
-    ) = PlayerViewModel(videoId, videos, FakeMediaItemFactory(), player)
+        positions: FakePlaybackPositionRepository = FakePlaybackPositionRepository(),
+    ) = PlayerViewModel(
+        videoId = videoId,
+        videoRepository = videos,
+        playbackPositionRepository = positions,
+        mediaItemFactory = FakeMediaItemFactory(),
+        // FakeのRepositoryはすぐに保存を終えるので、呼び出したスレッドでそのまま実行する
+        applicationScope = CoroutineScope(Dispatchers.Unconfined),
+        player = player,
+    )
+
+    // 画面と同じく`ViewModelStore`に入れる。`onCleared`はテストから直接呼べず、`ViewModelStore.clear`で起こすため。
+    // `lifecycle-viewmodel-testing`の`viewModelScenario`は、中でAndroidの`Bundle`を使い、JVMのユニットテストで失敗する
+    fun storedViewModel(store: ViewModelStore, create: () -> PlayerViewModel): PlayerViewModel =
+        ViewModelProvider.create(
+            store,
+            viewModelFactory {
+                initializer { create() }
+            },
+        )[PlayerViewModel::class]
 
     test("受け取る前は、読み込み中") {
         viewModel(fakeVideos()).uiState.value shouldBe PlayerUiState.Loading
@@ -185,17 +210,106 @@ class PlayerViewModelTest : FunSpec({
 
     test("ViewModelを破棄すると、Playerを解放する") {
         val player = FakePlayer()
-        // 画面と同じく`ViewModelStore`に入れ、`clear`で破棄する。`onCleared`はテストから直接呼べないため。
-        // `lifecycle-viewmodel-testing`の`viewModelScenario`は、中でAndroidの`Bundle`を使い、JVMのユニットテストで失敗する
         val store = ViewModelStore()
-        ViewModelProvider.create(
-            store,
-            viewModelFactory { initializer { viewModel(fakeVideos(), player) } },
-        )[PlayerViewModel::class]
+        storedViewModel(store) { viewModel(fakeVideos(), player) }
         player.releaseCount shouldBe 0
 
         store.clear()
 
         player.releaseCount shouldBe 1
+    }
+
+    context("再生位置の保存") {
+        test("取得に成功したあとに破棄すると、その時点の位置を、解放より先に保存する") {
+            val player = FakePlayer()
+            val positions = FakePlaybackPositionRepository()
+            val store = ViewModelStore()
+            val viewModel =
+                storedViewModel(store) { viewModel(fakeVideos(), player, positions = positions) }
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                }
+                player.currentPositionMs = 42_000
+
+                store.clear()
+
+                positions.getPosition(bigBuckBunny.id) shouldBe PlaybackPosition(42.seconds)
+            }
+            player.releaseCount shouldBe 1
+        }
+
+        test("読み込み中に破棄すると、保存しない") {
+            val positions = FakePlaybackPositionRepository()
+            val store = ViewModelStore()
+            val viewModel =
+                storedViewModel(store) { viewModel(fakeVideos(), positions = positions) }
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                }
+
+                store.clear()
+
+                positions.getPosition(bigBuckBunny.id).shouldBeNull()
+            }
+        }
+
+        test("該当する動画がないときに破棄すると、保存しない") {
+            val positions = FakePlaybackPositionRepository()
+            val store = ViewModelStore()
+            val viewModel = storedViewModel(store) {
+                viewModel(fakeVideos(), videoId = "unknown", positions = positions)
+            }
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.NotFound
+                }
+
+                store.clear()
+
+                positions.getPosition(VideoId("unknown")).shouldBeNull()
+            }
+        }
+
+        test("取得に失敗したときに破棄すると、保存しない") {
+            val positions = FakePlaybackPositionRepository()
+            val store = ViewModelStore()
+            val viewModel = storedViewModel(store) {
+                viewModel(fakeVideos(IOException()), positions = positions)
+            }
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Error
+                }
+
+                store.clear()
+
+                positions.getPosition(bigBuckBunny.id).shouldBeNull()
+            }
+        }
+
+        test("取得に成功したあとに再生が止まると、その時点の位置を保存する") {
+            val player = FakePlayer()
+            val positions = FakePlaybackPositionRepository()
+            val viewModel = viewModel(fakeVideos(), player, positions = positions)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                }
+                player.changeIsPlaying(true)
+                testScheduler.runCurrent()
+                player.currentPositionMs = 7_000
+
+                player.changeIsPlaying(false)
+                testScheduler.runCurrent()
+
+                positions.getPosition(bigBuckBunny.id) shouldBe PlaybackPosition(7.seconds)
+            }
+        }
     }
 })
