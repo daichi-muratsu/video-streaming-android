@@ -3,6 +3,7 @@ package io.github.daichimuratsu.videostreaming.feature.player
 import io.github.daichimuratsu.videostreaming.core.domain.fake.FakePlaybackPositionRepository
 import io.github.daichimuratsu.videostreaming.core.domain.model.PlaybackPosition
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
+import io.github.daichimuratsu.videostreaming.core.domain.repository.PlaybackPositionRepository
 import io.github.daichimuratsu.videostreaming.feature.player.fake.FakePlaybackProgress
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
@@ -13,6 +14,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -176,6 +178,32 @@ class PlaybackPositionTrackerTest : FunSpec({
                 testScheduler.runCurrent()
 
                 fixture.savedPosition() shouldBe PlaybackPosition(3.seconds)
+            }
+        }
+
+        test("先に呼んだ保存の書き込みが遅くても、最後に呼んだときの位置が残る") {
+            runTest {
+                val positions = FakePlaybackPositionRepository()
+                // 1回目の書き込みにだけ1秒かける。書き込みの順番が入れ替わる状況を作るため
+                val repository = object : PlaybackPositionRepository by positions {
+                    private var saveCount = 0
+
+                    override suspend fun savePosition(id: VideoId, position: PlaybackPosition) {
+                        if (saveCount++ == 0) delay(1.seconds)
+                        positions.savePosition(id, position)
+                    }
+                }
+                val progress = FakePlaybackProgress { testScheduler.currentTime.milliseconds }
+                val tracker =
+                    PlaybackPositionTracker(videoId, progress, repository, backgroundScope)
+                advance(3.seconds)
+                tracker.save()
+                advance(500.milliseconds)
+
+                tracker.save()
+                advance(2.seconds)
+
+                positions.getPosition(videoId) shouldBe PlaybackPosition(3_500.milliseconds)
             }
         }
     }

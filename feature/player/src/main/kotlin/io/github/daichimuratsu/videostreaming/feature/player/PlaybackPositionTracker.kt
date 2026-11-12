@@ -6,11 +6,14 @@ import io.github.daichimuratsu.videostreaming.core.domain.repository.PlaybackPos
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * `PlaybackPositionTracker`が読み取る、再生位置と再生中かどうかを表すinterface。
@@ -39,6 +42,8 @@ internal class PlaybackPositionTracker(
     // 画面より長く生きるスコープ。画面を離れたあとも、書き込みを最後まで終えるため
     private val saveScope: CoroutineScope,
 ) {
+    private val saveMutex = Mutex()
+
     /**
      * 再生中かどうかを受け取り続け、保存する。
      *
@@ -68,7 +73,12 @@ internal class PlaybackPositionTracker(
      */
     fun save() {
         val position = PlaybackPosition(progress.currentPosition)
-        saveScope.launch { repository.savePosition(videoId, position) }
+        // 呼んだ順に書き込む。`saveScope`は複数のスレッドで動くので、そのまま`launch`すると、先に始めた保存が
+        // あとから終わり、古い位置で上書きすることがある。`UNDISPATCHED`で呼んだスレッドのまま`Mutex`の待ちに並び、
+        // `Mutex`は待った順にロックを取得させるので、書き込みの順番が呼んだ順になる
+        saveScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            saveMutex.withLock { repository.savePosition(videoId, position) }
+        }
     }
 
     private companion object {
