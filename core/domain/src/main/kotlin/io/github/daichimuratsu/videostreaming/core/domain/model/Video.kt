@@ -20,4 +20,21 @@ data class Video(
     /** 関連動画（同じタグの動画）を探すのに使う */
     val tags: List<String>,
     val license: License,
-)
+) {
+    /**
+     * `videos`から、この動画の関連動画を選ぶ。
+     *
+     * タグが1つ以上共通する動画を、共通のタグが多い順に並べる。共通のタグが多いほど、内容が近いとみなすため。
+     * この動画自身は含めない。タグは完全に一致するときだけ共通とみなし、1本の中で重なったタグは1つと数える
+     */
+    fun relatedVideosIn(videos: List<Video>): List<Video> {
+        val ownTags = tags.toSet()
+        return videos
+            .filter { it.id != id }
+            .map { video -> video to (video.tags.toSet() intersect ownTags).size }
+            .filter { (_, sharedCount) -> sharedCount > 0 }
+            // `sortedByDescending`は安定なソートなので、共通のタグの数が同じ動画は、もとの順のまま並ぶ
+            .sortedByDescending { (_, sharedCount) -> sharedCount }
+            .map { (video, _) -> video }
+    }
+}

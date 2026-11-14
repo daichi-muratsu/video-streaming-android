@@ -35,6 +35,8 @@ class FakePlayer : StubPlayer() {
     ) {
         setMediaItemsList += mediaItems
         this.startPositionMs = startPositionMs
+        // 本物の`Player`と同じく、再生位置を始める位置に替える。`MediaItem`を替える前に前の動画の位置を保存したかを、テストで見分けるため
+        currentPositionMs = startPositionMs
     }
 
     override fun prepare() {

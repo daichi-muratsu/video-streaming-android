@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,15 +77,16 @@ fun PlayerRoute(
         uiState = uiState,
         player = viewModel.player,
         onReload = viewModel::reload,
+        onRelatedVideoClick = viewModel::selectVideo,
         modifier = modifier,
     )
 }
 
 /**
- * 再生画面の状態と`Player`を受け取って表示する。上にプレイヤー、下にタイトルと説明の箱を置く。
+ * 再生画面の状態と`Player`を受け取って表示する。上にプレイヤー、下にタイトルと説明の箱・関連動画を置く。
  *
  * 読み込み中・エラー・該当なしは、プレイヤーの枠の中に出す。枠の位置を変えずに中身だけを替え、読み込みが終わったときに画面が跳ねないようにするため。
- * 全画面では、説明の箱を隠し、プレイヤーを画面いっぱいに広げる
+ * 全画面では、説明の箱と関連動画を隠し、プレイヤーを画面いっぱいに広げる
  */
 // `ContentFrame`はMedia3の`@UnstableApi`（今後のバージョンで変わるかもしれないAPI）。
 // Media3でComposeから映像を表示する部品（`PlayerSurface`・`ContentFrame`）は、どちらも`@UnstableApi`のため、
@@ -95,6 +97,7 @@ fun PlayerScreen(
     uiState: PlayerUiState,
     player: Player,
     onReload: () -> Unit,
+    onRelatedVideoClick: (VideoId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // 横向きなら全画面にする。全画面でない横向きの画面を作らずに済ませるため。
@@ -145,16 +148,25 @@ fun PlayerScreen(
                 PlayerUiState.Error -> PlayerError(onReload = onReload)
             }
         }
-        // 説明の箱は、動画の情報を取得できてから出す。全画面では隠す
+        // 説明の箱と関連動画は、動画の情報を取得できてから出す。全画面では隠す
         if (uiState is PlayerUiState.Success && !isFullscreen) {
-            VideoDetails(
-                video = uiState.video,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // プレイヤーは上に固定し、説明だけをスクロールする。説明を読んでいるあいだも映像が見えるようにするため
-                    .verticalScroll(rememberScrollState())
-                    .navigationBarsPadding(),
-            )
+            // 動画を替えたら、スクロールの位置と説明の箱の開閉を最初に戻す。
+            // 関連動画は説明の下にあるので、選んだときのスクロールの位置のままだと、新しい動画の説明が見えないことがあるため
+            key(uiState.video.id) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // プレイヤーは上に固定し、説明と関連動画だけをスクロールする。説明を読んでいるあいだも映像が見えるようにするため
+                        .verticalScroll(rememberScrollState())
+                        .navigationBarsPadding(),
+                ) {
+                    VideoDetails(video = uiState.video, modifier = Modifier.fillMaxWidth())
+                    RelatedVideos(
+                        videos = uiState.relatedVideos,
+                        onVideoClick = onRelatedVideoClick,
+                    )
+                }
+            }
         }
     }
 }

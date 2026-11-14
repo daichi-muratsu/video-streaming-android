@@ -30,3 +30,29 @@ internal val previewVideo = Video(
             "サムネイルは本編の1場面を16:9に切り抜いたもの",
     ),
 )
+
+/**
+ * 再生画面のプレビューで使う関連動画。
+ *
+ * `previewVideo`（Big Buck Bunny）と`animation`のタグが共通する、実際のデータのSintelと同じ文言にする
+ */
+internal val previewRelatedVideos = listOf(
+    Video(
+        id = VideoId("sintel"),
+        title = "Sintel",
+        description = "少女シンテルが、いなくなった小さなドラゴンを探して、雪山を越える旅に出るファンタジー。",
+        creator = "Blender Foundation",
+        duration = VideoDuration(888.seconds),
+        publishedAt = LocalDate.of(2010, 9, 30),
+        thumbnailUrl = "",
+        streamUrl = "",
+        tags = listOf("animation", "fantasy"),
+        license = License(
+            name = "CC BY 3.0",
+            url = "https://creativecommons.org/licenses/by/3.0/",
+            attribution = "© copyright Blender Foundation | durian.blender.org",
+            changes = "HLS形式に変換し、3つの画質（360p / 720p / 1080p）に再エンコード。" +
+                "サムネイルは本編の1場面を16:9に切り抜いたもの",
+        ),
+    ),
+)

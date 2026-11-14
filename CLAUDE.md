@@ -50,13 +50,13 @@
 - ViewModelは、UseCaseの`Flow`を`stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), …)`で公開し、画面は`collectAsStateWithLifecycle`で受け取る。画面が見えないあいだは受け取りを止めるため。`init`で読み込みを始めない（例：`VideoListViewModel`）
 - 1回だけ取得するデータ（`suspend`の取得）は、`flow { emit(…) }`にして`SharingStarted.Lazily`で公開する。止めても減らせる処理がなく、`WhileSubscribed`だと画面に戻ったときに取得し直すため（例：`PlayerViewModel`）。`Lazily`は受け取る側が現れるまで始めないので、表示に使わなくても画面で受け取る
 - 失敗は`Flow`の`catch`で`UiState`にする。`try`〜`catch (e: Exception)`は`CancellationException`まで受け止めるので使わない。再読み込みは、合図の`Flow`から`flatMapLatest`で作り直し、`catch`は`flatMapLatest`の内側に置く。外側に置くと、失敗したときに合図を受け取る`Flow`ごと終わり、再読み込みが効かなくなるため
-- ドメインモデルを画面用のクラスに写さない。組み合わせ・判定はDomain層で済ませ、表示の形式（再生時間の`9:56`など）は画面側の関数で整える（例：`formatDuration`）。featureモジュール同士で使う表示の関数は`:core:ui`に置く
+- ドメインモデルを画面用のクラスに写さない。組み合わせ・判定はDomain層で済ませ、表示の形式（再生時間の`9:56`など）は画面側の関数で整える（例：`formatDuration`）。featureモジュール同士で使う表示の関数・部品は`:core:ui`に置く（例：`VideoCard`）
 - `Player`などから状態を読む部品と、値だけを受け取って表示する部品に分ける（例：`PlayerControlsOverlay`と`PlayerControls`）。値だけを受け取る部品を、プレビューとUIテストで確かめるため
 - 文言はfeatureモジュールの`strings.xml`に置き、名前の先頭にモジュールの接頭辞を付ける（例：`video_list_`・`player_`・`core_ui_`）。リソースはアプリ全体で1つにまとめられ、名前が重なると上書きされるため
 - アイコンは、Material SymbolsのXMLを`res/drawable`に置く（例：`player_ic_play_arrow`）。`material-icons`のライブラリは、公式がすすめていないので使わない。XMLの`android:tint="?attr/colorControlNormal"`はAppCompatのテーマの属性でリソースのリンクが失敗するので外し、色は`Icon`の`tint`で付ける
 - テーマは`:core:ui`の`VideoStreamingTheme`を使う。プレビューは`@PreviewLightDark`で明暗の両方を作り、`VideoStreamingTheme(dynamicColor = false)`で囲む（壁紙で色が変わらないようにするため）。プレビューのデータは1か所にまとめる（例：`previewVideos`）
 - 画面遷移は`:app`の`VideoStreamingNavDisplay`でつなぐ。キーは`@Serializable`の`NavKey`にし、`rememberViewModelStoreNavEntryDecorator()`でViewModelを画面ごとに作る
-- キーの引数（動画のIDなど）は、Hiltのassisted injectionでViewModelに渡す（`hiltViewModel<VM, VM.Factory>(creationCallback = …)`。例：`PlayerKey`・`PlayerRoute`）。キーとassisted injectionの引数は`String`にする。キーに`value class`を入れるとDomain層に`kotlinx.serialization`の注釈を持ち込み、assisted injectionの引数に`value class`を使うとKotlinが関数の名前を書き換えて、Daggerが`Factory`を作れないため。プロセスが終了されても、`rememberNavBackStack`が保存したキーから引数が戻るので、引数を`SavedStateHandle`に保存しない
+- キーの引数（動画のIDなど）は、Hiltのassisted injectionでViewModelに渡す（`hiltViewModel<VM, VM.Factory>(creationCallback = …)`。例：`PlayerKey`・`PlayerRoute`）。キーとassisted injectionの引数は`String`にする。キーに`value class`を入れるとDomain層に`kotlinx.serialization`の注釈を持ち込み、assisted injectionの引数に`value class`を使うとKotlinが関数の名前を書き換えて、Daggerが`Factory`を作れないため。プロセスが終了されても、`rememberNavBackStack`が保存したキーから引数が戻るので、引数を`SavedStateHandle`に保存しない。画面の中で変わる値（関連動画で替えた動画のIDなど）は、キーから戻らないので`SavedStateHandle`に保存する（例：`PlayerViewModel`の`getStateFlow`）
 
 ### 再生
 
@@ -65,6 +65,7 @@
 - 再生中か・再生位置などの再生の状態は`UiState`に入れず、画面がMedia3の状態ホルダー（`rememberPlayPauseButtonState`など）で`Player`から受け取る。`UiState`にも持つと、`Player`と食い違うおそれがあるため
 - `MediaItem`は`MediaItemFactory`で作る（本物は`HlsMediaItemFactory`）。`MediaItem.Builder.setUri`はAndroidの`Uri.parse`を呼び、JVMのユニットテストで動かないため
 - 再生位置の保存は`PlaybackPositionTracker`に分ける。Trackerは`Player`を直接扱わず、再生位置と再生中かどうかだけの`PlaybackProgress`を受け取る（Fakeでテストするため）。`Player`との変換（ミリ秒から`Duration`、`Player.Listener`から`Flow`）は、アダプターの`PlayerPlaybackProgress`だけで行う
+- 関連動画は、画面遷移にせず、同じ`Player`に`setMediaItem`して切り替える（`PlayerViewModel.selectVideo`）。Trackerは作るときの動画のIDで保存するので、動画ごとに作り直す。前の動画の位置は`MediaItem`を替える前に保存する（替えたあとは、`Player`の位置が新しい動画の始める位置になるため）。取得し終えるまでは前の動画の表示を続け、読み込み中を挟まない
 - 再生位置は、再生中の10秒ごと・再生が止まったとき・画面を離れるとき（`onCleared`）に保存する。`MediaItem`を設定する前に画面を離れたときは保存しない（前に保存した位置を0で上書きするため）
 - 再生を始める位置は`GetResumePositionUseCase`で取得し、`setMediaItem(item, startPositionMs)`に渡す。位置を取得してから`MediaItem`を設定し、取得に失敗したら設定せずにエラーにする（0から再生すると、次の保存で、読み出せなかった再生位置を上書きするため）
 - 画面を離れたあとも続ける処理は、`@ApplicationScope`の`CoroutineScope`で行う（`viewModelScope`は`onCleared`で止まるため）。`Player`はメインスレッドで読み、書き込みだけをこのスコープで行う
@@ -77,7 +78,7 @@
 - エラーの案内は`PlaybackErrorKind.of`で`errorCode`から決める。通信状況を確かめる案内は、接続の失敗と時間切れ（`ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`・`ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT`）だけに出す。サーバーのエラーやデコードの失敗は、通信状況を確かめても直らないため
 - 読み込みの失敗の自動の再試行と時間切れは、ExoPlayerの既定（`DefaultLoadErrorHandlingPolicy`・`DefaultHttpDataSource`）に任せる。自動の再試行のあとにエラーになったら、再試行のボタンで戻す
 - バッファリングのスピナーは、`STATE_BUFFERING`かつ`playWhenReady`が`true`のときだけ出す（`PlayerView`の`SHOW_BUFFERING_WHEN_PLAYING`と同じ条件）。一時停止中も読み込みを続けてバッファリングになるが、待っても再生は始まらないため
-- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`OrientationLock`（全画面の向きの固定）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackErrorKind`（再生のエラーの種類）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
+- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`OrientationLock`（全画面の向きの固定）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`RelatedVideos`（関連動画）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackErrorKind`（再生のエラーの種類）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
 
 ## テスト
 

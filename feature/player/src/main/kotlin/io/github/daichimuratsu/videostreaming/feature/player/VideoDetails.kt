@@ -38,7 +38,7 @@ import java.time.format.FormatStyle
 /**
  * プレイヤーの下に、タイトルと説明の箱を表示する。
  *
- * 説明の箱は最初は閉じておく。クレジットは場所をとり、その下に置く予定の関連動画が押し出されるため
+ * 説明の箱は最初は閉じておく。クレジットは場所をとり、その下の関連動画が押し出されるため
  */
 @Composable
 internal fun VideoDetails(video: Video, modifier: Modifier = Modifier) {
