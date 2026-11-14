@@ -10,6 +10,7 @@ import io.github.daichimuratsu.videostreaming.core.domain.fake.FakeVideoReposito
 import io.github.daichimuratsu.videostreaming.core.domain.fake.testVideo
 import io.github.daichimuratsu.videostreaming.core.domain.model.PlaybackPosition
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
+import io.github.daichimuratsu.videostreaming.core.domain.usecase.GetResumePositionUseCase
 import io.github.daichimuratsu.videostreaming.core.testing.MainDispatcherExtension
 import io.github.daichimuratsu.videostreaming.feature.player.fake.FakeMediaItemFactory
 import io.github.daichimuratsu.videostreaming.feature.player.fake.FakePlayer
@@ -43,6 +44,7 @@ class PlayerViewModelTest : FunSpec({
     ) = PlayerViewModel(
         videoId = videoId,
         videoRepository = videos,
+        getResumePosition = GetResumePositionUseCase(positions),
         playbackPositionRepository = positions,
         mediaItemFactory = FakeMediaItemFactory(),
         // FakeのRepositoryはすぐに保存を終えるので、呼び出したスレッドでそのまま実行する
@@ -205,6 +207,54 @@ class PlayerViewModelTest : FunSpec({
                 }
             }
             player.setMediaItemsList.size shouldBe 1
+        }
+    }
+
+    // 境界値（10秒・90%）は`WatchStatusTest`と`GetResumePositionUseCaseTest`で確かめてある。
+    // ここでは、UseCaseの結果が`Player`に渡ることを、結果が変わる範囲ごとの代表値で確かめる
+    context("保存した再生位置から、再生を始める位置を決める") {
+        suspend fun startPositionMs(positions: FakePlaybackPositionRepository): Long? {
+            val player = FakePlayer()
+            runTest {
+                viewModel(fakeVideos(), player, positions = positions).uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                }
+            }
+            return player.startPositionMs
+        }
+
+        test("再生位置が保存されていなければ、最初から再生する") {
+            startPositionMs(FakePlaybackPositionRepository()) shouldBe 0L
+        }
+
+        test("視聴途中なら、保存した再生位置から再生する") {
+            val positions = FakePlaybackPositionRepository(
+                mapOf(bigBuckBunny.id to PlaybackPosition(120.seconds)),
+            )
+            startPositionMs(positions) shouldBe 120_000L
+        }
+
+        test("視聴済みなら、最初から再生する") {
+            val positions = FakePlaybackPositionRepository(
+                mapOf(bigBuckBunny.id to PlaybackPosition(570.seconds)),
+            )
+            startPositionMs(positions) shouldBe 0L
+        }
+
+        test("再生位置の取得に失敗したら、エラーになり、MediaItemを設定せず、prepareも呼ばない") {
+            val player = FakePlayer()
+            val positions = FakePlaybackPositionRepository().apply {
+                getPositionError = IOException()
+            }
+            runTest {
+                viewModel(fakeVideos(), player, positions = positions).uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Error
+                }
+            }
+            player.setMediaItemsList.shouldBeEmpty()
+            player.prepareCount shouldBe 0
         }
     }
 

@@ -27,7 +27,7 @@
 - パッケージは`model`（値オブジェクト・エンティティ・ドメインルール）・`repository`（interface）・`usecase`に分ける
 - 値オブジェクトは、正しく作れば起きない値（負の再生位置など）を`init`の`require`で止める
 - 再生位置・長さは`Duration`で持つ。秒・ミリ秒との変換は、取得元との境界（Data層でJSONを変換するところ、`Player`の値を変換するところ）だけで行う
-- 視聴状態の判定は`WatchStatus.of`の1か所で行う。一覧画面の表示と再生を始める位置は、どちらもこの結果を使う
+- 視聴状態の判定は`WatchStatus.of`の1か所で行う。一覧画面の表示と再生を始める位置は、どちらもこの結果を使う。視聴済みの動画を見直すと、新しい再生位置で上書きし、表示も「視聴途中」などに変わる。「視聴済み」になったことを別に保存しない（表示と再生を始める位置を食い違わせないため）
 - Repositoryは、1回だけの操作を`suspend`、変わり続けるデータを`Flow`にする。`Flow`を返す関数は`observe`で始める。取得の失敗は例外で伝え、該当するデータがない場合は`null`を返す
 - UseCaseは`@Inject constructor`と`operator fun invoke`で作る（例：`GetResumePositionUseCase`）
 
@@ -56,7 +56,7 @@
 - アイコンは、Material SymbolsのXMLを`res/drawable`に置く（例：`player_ic_play_arrow`）。`material-icons`のライブラリは、公式がすすめていないので使わない。XMLの`android:tint="?attr/colorControlNormal"`はAppCompatのテーマの属性でリソースのリンクが失敗するので外し、色は`Icon`の`tint`で付ける
 - テーマは`:core:ui`の`VideoStreamingTheme`を使う。プレビューは`@PreviewLightDark`で明暗の両方を作り、`VideoStreamingTheme(dynamicColor = false)`で囲む（壁紙で色が変わらないようにするため）。プレビューのデータは1か所にまとめる（例：`previewVideos`）
 - 画面遷移は`:app`の`VideoStreamingNavDisplay`でつなぐ。キーは`@Serializable`の`NavKey`にし、`rememberViewModelStoreNavEntryDecorator()`でViewModelを画面ごとに作る
-- キーの引数（動画のIDなど）は、Hiltのassisted injectionでViewModelに渡す（`hiltViewModel<VM, VM.Factory>(creationCallback = …)`。例：`PlayerKey`・`PlayerRoute`）。キーとassisted injectionの引数は`String`にする。キーに`value class`を入れるとDomain層に`kotlinx.serialization`の注釈を持ち込み、assisted injectionの引数に`value class`を使うとKotlinが関数の名前を書き換えて、Daggerが`Factory`を作れないため
+- キーの引数（動画のIDなど）は、Hiltのassisted injectionでViewModelに渡す（`hiltViewModel<VM, VM.Factory>(creationCallback = …)`。例：`PlayerKey`・`PlayerRoute`）。キーとassisted injectionの引数は`String`にする。キーに`value class`を入れるとDomain層に`kotlinx.serialization`の注釈を持ち込み、assisted injectionの引数に`value class`を使うとKotlinが関数の名前を書き換えて、Daggerが`Factory`を作れないため。プロセスが終了されても、`rememberNavBackStack`が保存したキーから引数が戻るので、引数を`SavedStateHandle`に保存しない
 
 ### 再生
 
@@ -66,6 +66,7 @@
 - `MediaItem`は`MediaItemFactory`で作る（本物は`HlsMediaItemFactory`）。`MediaItem.Builder.setUri`はAndroidの`Uri.parse`を呼び、JVMのユニットテストで動かないため
 - 再生位置の保存は`PlaybackPositionTracker`に分ける。Trackerは`Player`を直接扱わず、再生位置と再生中かどうかだけの`PlaybackProgress`を受け取る（Fakeでテストするため）。`Player`との変換（ミリ秒から`Duration`、`Player.Listener`から`Flow`）は、アダプターの`PlayerPlaybackProgress`だけで行う
 - 再生位置は、再生中の10秒ごと・再生が止まったとき・画面を離れるとき（`onCleared`）に保存する。`MediaItem`を設定する前に画面を離れたときは保存しない（前に保存した位置を0で上書きするため）
+- 再生を始める位置は`GetResumePositionUseCase`で取得し、`setMediaItem(item, startPositionMs)`に渡す。位置を取得してから`MediaItem`を設定し、取得に失敗したら設定せずにエラーにする（0から再生すると、次の保存で、読み出せなかった再生位置を上書きするため）
 - 画面を離れたあとも続ける処理は、`@ApplicationScope`の`CoroutineScope`で行う（`viewModelScope`は`onCleared`で止まるため）。`Player`はメインスレッドで読み、書き込みだけをこのスコープで行う
 - 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
 
@@ -81,7 +82,7 @@
 - Fakeは、使うモジュールの`src/test`の`fake`パッケージに置く（例：`:core:data`の`FakeVideoApi`）
 - ほかのモジュールのテストでも使うFakeは、`src/testFixtures`の`fake`パッケージに置く（例：`:core:domain`の`FakePlaybackPositionRepository`）。`src/test`の中身は、ほかのモジュールから参照できないため。使う側は`testImplementation(testFixtures(project(":core:domain")))`で依存関係を追加する
 - テスト用の道具（Fakeではないもの）は`:core:testing`に置く（例：`MainDispatcherExtension`）。featureモジュールにはConvention Pluginで`testImplementation`に追加してある
-- `Player`のFakeは、`media3-test-utils`の`StubPlayer`を継承し、使う関数だけを上書きする（例：`FakePlayer`）。プロパティの名前は`Player`の関数と重ねない（`var mediaItem`は`setMediaItem`と衝突する）。`isPlaying`は`BasePlayer`の`final`の関数なので、元になる`getPlaybackState`・`getPlayWhenReady`・`getPlaybackSuppressionReason`を上書きする
+- `Player`のFakeは、`media3-test-utils`の`StubPlayer`を継承し、使う関数だけを上書きする（例：`FakePlayer`）。プロパティの名前は`Player`の関数と重ねない（`var mediaItem`は`setMediaItem`と衝突する）。`isPlaying`は`BasePlayer`の`final`の関数なので、元になる`getPlaybackState`・`getPlayWhenReady`・`getPlaybackSuppressionReason`を上書きする。`setMediaItem(MediaItem, Long)`は`BasePlayer`の中で`setMediaItems(List, Int, Long)`を呼ぶので、こちらを上書きする
 - ViewModelの`onCleared`は、`ViewModelStore`に`ViewModelProvider.create(…)`で入れ、`ViewModelStore.clear()`で起こす（例：`PlayerViewModelTest`）。`lifecycle-viewmodel-testing`の`viewModelScenario`は、中でAndroidの`Bundle`を使い、Androidのモジュールのユニットテストで失敗するため
 - RoomのDAOのテストは`src/androidTest`に置き、メモリ上のデータベースとアプリと同じ`BundledSQLiteDriver`で確かめる（例：`PlaybackPositionDaoTest`）。公式がRobolectricでのテストを推奨していないため
 - JUnit 4のテストの関数名は、日本語をバッククォートで囲む（ktlintの`function-naming`が、囲まない日本語の関数名を指摘するため）。空白は入れない（空白を含む関数名は、AndroidではAPI level 30以上でしか使えず、`minSdk`は26のため）

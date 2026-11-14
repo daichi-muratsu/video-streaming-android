@@ -23,7 +23,13 @@ class FakePlaybackPositionRepository(
 
     override fun observePositions(): Flow<Map<VideoId, PlaybackPosition>> = positions
 
-    override suspend fun getPosition(id: VideoId): PlaybackPosition? = positions.value[id]
+    /** `getPosition`で投げる例外。取得の失敗を再現するときに入れる。 */
+    var getPositionError: Throwable? = null
+
+    override suspend fun getPosition(id: VideoId): PlaybackPosition? {
+        getPositionError?.let { throw it }
+        return positions.value[id]
+    }
 
     override suspend fun savePosition(id: VideoId, position: PlaybackPosition) {
         positions.update { it + (id to position) }
