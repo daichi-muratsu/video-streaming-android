@@ -5,4 +5,10 @@
     <!-- 読み上げ用の長さ・再生位置（`durationDescription`） -->
     <string name="core_ui_duration_description">%1$d分%2$d秒</string>
     <string name="core_ui_duration_with_hours_description">%1$d時間%2$d分%3$d秒</string>
+
+    <!-- 動画のカード（`VideoCard`） -->
+    <string name="core_ui_creator_and_year">%1$s・%2$d</string>
+    <string name="core_ui_watched">視聴済み</string>
+    <string name="core_ui_in_progress_description">視聴途中</string>
+    <string name="core_ui_play_label">再生</string>
 </resources>
