@@ -7,10 +7,12 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.daichimuratsu.videostreaming.core.domain.model.PlaybackPosition
 import io.github.daichimuratsu.videostreaming.core.domain.model.Video
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
 import io.github.daichimuratsu.videostreaming.core.domain.repository.PlaybackPositionRepository
 import io.github.daichimuratsu.videostreaming.core.domain.repository.VideoRepository
+import io.github.daichimuratsu.videostreaming.core.domain.usecase.GetResumePositionUseCase
 import io.github.daichimuratsu.videostreaming.feature.player.di.ApplicationScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,7 +25,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,6 +41,7 @@ class PlayerViewModel @AssistedInject constructor(
     // Daggerが`Factory`の実装を作れない
     @Assisted videoId: String,
     private val videoRepository: VideoRepository,
+    private val getResumePosition: GetResumePositionUseCase,
     playbackPositionRepository: PlaybackPositionRepository,
     private val mediaItemFactory: MediaItemFactory,
     // 画面を離れたあとも、再生位置の最後の保存を終えるためのスコープ。`viewModelScope`は`onCleared`で止まる
@@ -88,17 +90,27 @@ class PlayerViewModel @AssistedInject constructor(
     private fun playerStates(isReload: Boolean): Flow<PlayerUiState> =
         flow { emit(videoRepository.getVideo(videoId)) }
             .map { video ->
-                if (video == null) PlayerUiState.NotFound else PlayerUiState.Success(video)
+                if (video == null) {
+                    PlayerUiState.NotFound
+                } else {
+                    // 始める位置の取得に失敗したときは、`MediaItem`を設定せずにエラーにする。
+                    // 0から再生すると、次の保存で、読み出せなかった再生位置を上書きするため
+                    startPlayback(video, getResumePosition(video))
+                    PlayerUiState.Success(video)
+                }
             }
-            .onEach { state -> if (state is PlayerUiState.Success) startPlayback(state.video) }
             .onStart { if (isReload) emit(PlayerUiState.Loading) }
             // `flatMapLatest`の内側で受け止める。外側で受け止めると、合図を受け取る`Flow`ごと終わり、再読み込みが効かなくなるため。
             // `catch`は`Flow`を止めるための例外（`CancellationException`）を受け止めない
             .catch { emit(PlayerUiState.Error) }
 
     // 一覧で動画を選ぶ操作を、再生を始める指示として扱う。再生画面で再生ボタンを押す操作を増やさないため
-    private fun startPlayback(video: Video) {
-        player.setMediaItem(mediaItemFactory.create(video))
+    private fun startPlayback(video: Video, startPosition: PlaybackPosition) {
+        // `Player`との境界なので、ここでミリ秒に変換する
+        player.setMediaItem(
+            mediaItemFactory.create(video),
+            startPosition.value.inWholeMilliseconds,
+        )
         player.prepare()
         player.playWhenReady = true
         startTracking()

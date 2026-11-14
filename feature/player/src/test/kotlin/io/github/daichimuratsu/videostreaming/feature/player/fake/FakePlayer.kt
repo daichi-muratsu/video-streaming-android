@@ -7,7 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.test.utils.StubPlayer
 
 /**
- * テスト用の`Player`。設定された`MediaItem`・`prepare`・自動で再生するか・解放を記録し、再生位置と再生中かどうかをテストから変える。
+ * テスト用の`Player`。設定された`MediaItem`と再生を始める位置・`prepare`・自動で再生するか・解放を記録し、再生位置と再生中かどうかをテストから変える。
  *
  * ExoPlayerはAndroidの環境がないと作れないため、すべての関数が例外を投げる`StubPlayer`を元にし、ViewModelが使う関数だけを上書きする。
  * プロパティの名前は、`Player`の関数と重ならないようにする。
@@ -23,9 +23,18 @@ class FakePlayer : StubPlayer() {
     var releaseCount = 0
         private set
 
-    // `setMediaItem(MediaItem)`は、`BasePlayer`の中でこの関数を呼ぶ
-    override fun setMediaItems(mediaItems: MutableList<MediaItem>, resetPosition: Boolean) {
+    /** 最後に`MediaItem`を設定したときの、再生を始める位置（ミリ秒）。設定していなければ`null`。 */
+    var startPositionMs: Long? = null
+        private set
+
+    // `setMediaItem(MediaItem, Long)`は、`BasePlayer`の中でこの関数を呼ぶ
+    override fun setMediaItems(
+        mediaItems: MutableList<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long,
+    ) {
         setMediaItemsList += mediaItems
+        this.startPositionMs = startPositionMs
     }
 
     override fun prepare() {
