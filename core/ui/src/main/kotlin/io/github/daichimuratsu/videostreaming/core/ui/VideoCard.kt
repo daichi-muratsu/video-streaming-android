@@ -1,4 +1,4 @@
-package io.github.daichimuratsu.videostreaming.feature.videolist
+package io.github.daichimuratsu.videostreaming.core.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,37 +25,38 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import io.github.daichimuratsu.videostreaming.core.domain.model.VideoWithWatchStatus
+import io.github.daichimuratsu.videostreaming.core.domain.model.Video
 import io.github.daichimuratsu.videostreaming.core.domain.model.WatchStatus
-import io.github.daichimuratsu.videostreaming.core.ui.durationDescription
-import io.github.daichimuratsu.videostreaming.core.ui.formatDuration
 import kotlin.time.Duration
 
 /**
- * 一覧の1件（サムネイル・タイトル・作者・公開年・再生時間・視聴状態）を表示する。
+ * 動画1本分のカード（サムネイル・タイトル・作者・公開年・再生時間・視聴状態）を表示する。
  *
+ * 一覧画面と再生画面の関連動画で見た目をそろえるため、featureモジュールではなくここに置く。
  * 1件全体を押せるようにする。範囲が広いほうが押しやすく、読み上げでも1件が1つのまとまりになるため
+ *
+ * @param status 視聴状態。`null`のときは、視聴済みの印と視聴途中の帯を出さない
  */
 @Composable
-internal fun VideoListItem(
-    item: VideoWithWatchStatus,
+fun VideoCard(
+    video: Video,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    status: WatchStatus? = null,
 ) {
-    val video = item.video
     Column(
         modifier = modifier
             .fillMaxWidth()
             // 読み上げで、ダブルタップの操作を「再生」と伝えるため
             .clickable(
-                onClickLabel = stringResource(R.string.video_list_play_label),
+                onClickLabel = stringResource(R.string.core_ui_play_label),
                 onClick = onClick,
             ),
     ) {
         Thumbnail(
             url = video.thumbnailUrl,
             duration = video.duration.value,
-            status = item.status,
+            status = status,
         )
         Text(
             text = video.title,
@@ -66,7 +67,7 @@ internal fun VideoListItem(
         )
         Text(
             text = stringResource(
-                R.string.video_list_creator_and_year,
+                R.string.core_ui_creator_and_year,
                 video.creator,
                 video.publishedAt.year,
             ),
@@ -81,7 +82,7 @@ internal fun VideoListItem(
 private fun Thumbnail(
     url: String,
     duration: Duration,
-    status: WatchStatus,
+    status: WatchStatus?,
     modifier: Modifier = Modifier,
 ) {
     // 画像が届く前から16:9の枠を取り、届いたときに下の項目がずれないようにする
@@ -99,7 +100,7 @@ private fun Thumbnail(
         )
         if (status == WatchStatus.Watched) {
             Badge(
-                text = stringResource(R.string.video_list_watched),
+                text = stringResource(R.string.core_ui_watched),
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(start = 8.dp, bottom = 8.dp),
@@ -115,7 +116,7 @@ private fun Thumbnail(
                 .semantics { contentDescription = durationDescription },
         )
         if (status is WatchStatus.InProgress) {
-            val inProgressDescription = stringResource(R.string.video_list_in_progress_description)
+            val inProgressDescription = stringResource(R.string.core_ui_in_progress_description)
             LinearProgressIndicator(
                 progress = { status.progress.toFloat() },
                 // サムネイルの下の端に重ねる細い帯にするため、端の丸み・すき間・終わりの点をなくす

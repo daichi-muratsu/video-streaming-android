@@ -2,12 +2,6 @@
 <resources>
     <!-- 名前の先頭に`video_list_`を付ける。リソースはアプリ全体で1つにまとめられ、ほかのモジュールと名前が重なると上書きされるため -->
 
-    <!-- 1件の表示 -->
-    <string name="video_list_creator_and_year">%1$s・%2$d</string>
-    <string name="video_list_watched">視聴済み</string>
-    <string name="video_list_in_progress_description">視聴途中</string>
-    <string name="video_list_play_label">再生</string>
-
     <!-- 読み込み中・エラー・空 -->
     <string name="video_list_loading_description">読み込み中</string>
     <string name="video_list_error_title">動画を読み込めませんでした</string>

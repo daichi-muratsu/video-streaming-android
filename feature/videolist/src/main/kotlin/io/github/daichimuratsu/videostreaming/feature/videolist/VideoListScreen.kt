@@ -31,6 +31,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoWithWatchStatus
+import io.github.daichimuratsu.videostreaming.core.ui.VideoCard
 import io.github.daichimuratsu.videostreaming.core.ui.theme.VideoStreamingTheme
 
 /**
@@ -105,7 +106,11 @@ private fun VideoList(
     ) {
         // 再生位置が変わって一覧が作り直されても、同じ動画の項目として引き継ぐため、動画のIDで結ぶ
         items(items = videos, key = { it.video.id.value }) { item ->
-            VideoListItem(item = item, onClick = { onVideoClick(item.video.id) })
+            VideoCard(
+                video = item.video,
+                onClick = { onVideoClick(item.video.id) },
+                status = item.status,
+            )
         }
     }
 }
