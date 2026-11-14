@@ -73,7 +73,11 @@
 - オーディオフォーカスとイヤホンを抜いたときの一時停止は、ExoPlayerの設定（`setAudioAttributes`の`handleAudioFocus`・`setHandleAudioBecomingNoisy`）に任せ、自分で書かない
 - 全画面かどうかは画面の向きで決める（横向きなら全画面）。全画面のボタンは向きを固定し、端末の傾きが固定した向きに追いついたら外す（すぐに外すと、横に持ったまま全画面を終えたときに、また全画面になるため）。追いついたかの判定は`OrientationLock`に分けてテストする。自動回転がオフのときは外さない
 - 再生中だけ`Modifier.keepScreenOn()`で画面を点けたままにする（例：`KeepScreenOnWhilePlaying`）。一時停止中は、通常どおり画面を消す
-- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`OrientationLock`（全画面の向きの固定）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
+- 再生のエラーは、`rememberErrorState`で`Player`から受け取り、`UiState`に入れない（`UiState.Error`は、動画の情報の取得の失敗だけを表す）。再試行のボタンは、画面から`prepare()`と`play()`を呼ぶ（一時停止中にエラーになったときも、`prepare()`だけでは再生が始まらないため）
+- エラーの案内は`PlaybackErrorKind.of`で`errorCode`から決める。通信状況を確かめる案内は、接続の失敗と時間切れ（`ERROR_CODE_IO_NETWORK_CONNECTION_FAILED`・`ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT`）だけに出す。サーバーのエラーやデコードの失敗は、通信状況を確かめても直らないため
+- 読み込みの失敗の自動の再試行と時間切れは、ExoPlayerの既定（`DefaultLoadErrorHandlingPolicy`・`DefaultHttpDataSource`）に任せる。自動の再試行のあとにエラーになったら、再試行のボタンで戻す
+- バッファリングのスピナーは、`STATE_BUFFERING`かつ`playWhenReady`が`true`のときだけ出す（`PlayerView`の`SHOW_BUFFERING_WHEN_PLAYING`と同じ条件）。一時停止中も読み込みを続けてバッファリングになるが、待っても再生は始まらないため
+- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`OrientationLock`（全画面の向きの固定）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackErrorKind`（再生のエラーの種類）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
 
 ## テスト
 
