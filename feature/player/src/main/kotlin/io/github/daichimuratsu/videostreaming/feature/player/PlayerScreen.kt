@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.state.rememberErrorState
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
 
 /**
@@ -113,13 +114,30 @@ fun PlayerScreen(
                     // 映像の縦横比を保って枠に収める。最初の映像が出るまでは、黒い覆いをかぶせる
                     ContentFrame(player = player, modifier = Modifier.fillMaxSize())
                     KeepScreenOnWhilePlaying(player = player)
-                    PlayerControlsOverlay(
-                        player = player,
-                        isFullscreen = isFullscreen,
-                        onToggleFullscreen = { requestFullscreen(!isFullscreen) },
-                        // 横向きの全画面では、ディスプレイカットアウト（カメラのための切り欠き）に操作ボタンが重ならないようにする
-                        modifier = Modifier.windowInsetsPadding(WindowInsets.displayCutout),
-                    )
+                    // 再生のエラーは`UiState`に入れず、`Player`から受け取る。`prepare()`でやり直すと`Player`がエラーを消すので、
+                    // ほかに持つと表示が残るおそれがあるため
+                    val playbackError = rememberErrorState(player).error
+                    // 横向きの全画面では、ディスプレイカットアウト（カメラのための切り欠き）に操作ボタンが重ならないようにする
+                    val cutoutPadding = Modifier.windowInsetsPadding(WindowInsets.displayCutout)
+                    if (playbackError == null) {
+                        PlayerControlsOverlay(
+                            player = player,
+                            isFullscreen = isFullscreen,
+                            onToggleFullscreen = { requestFullscreen(!isFullscreen) },
+                            modifier = cutoutPadding,
+                        )
+                    } else {
+                        PlayerPlaybackError(
+                            kind = PlaybackErrorKind.of(playbackError.errorCode),
+                            // `prepare()`でエラーが起きた位置から読み込み直す。一時停止中にエラーになったときも再生を始めるため、
+                            // `play()`も呼ぶ（Media3の再生ボタンの処理と同じ組み合わせ）
+                            onRetry = {
+                                player.prepare()
+                                player.play()
+                            },
+                            modifier = cutoutPadding,
+                        )
+                    }
                 }
 
                 PlayerUiState.NotFound -> PlayerNotFound()

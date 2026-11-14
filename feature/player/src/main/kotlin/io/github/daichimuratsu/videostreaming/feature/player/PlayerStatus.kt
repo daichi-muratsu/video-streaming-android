@@ -1,6 +1,8 @@
 package io.github.daichimuratsu.videostreaming.feature.player
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -47,6 +49,52 @@ internal fun PlayerLoading(modifier: Modifier = Modifier) {
 /** プレイヤーの枠の中に、動画の情報を取得できなかったことと、再読み込みのボタンを表示する。 */
 @Composable
 internal fun PlayerError(onReload: () -> Unit, modifier: Modifier = Modifier) {
+    PlayerErrorContent(
+        title = stringResource(R.string.player_error_title),
+        message = stringResource(R.string.player_error_message),
+        actionLabel = stringResource(R.string.player_reload),
+        onAction = onReload,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 映像の上に、再生できなかったことと、再試行のボタンを表示する。
+ *
+ * 通信のエラーのときだけ、通信状況を確かめる案内を出す。それ以外のエラーは、通信状況を確かめても直らないため
+ */
+@Composable
+internal fun PlayerPlaybackError(
+    kind: PlaybackErrorKind,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 止まった映像の上に出すので、白い場面でも文字が読めるように半透明の黒を重ねる。
+    // 黒は枠全体に重ね、`modifier`の余白（ディスプレイカットアウトの分）は文字とボタンだけに付ける
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f))) {
+        PlayerErrorContent(
+            title = stringResource(R.string.player_playback_error_title),
+            message = stringResource(
+                when (kind) {
+                    PlaybackErrorKind.Network -> R.string.player_error_message
+                    PlaybackErrorKind.Other -> R.string.player_playback_error_other_message
+                },
+            ),
+            actionLabel = stringResource(R.string.player_retry),
+            onAction = onRetry,
+            modifier = modifier,
+        )
+    }
+}
+
+@Composable
+private fun PlayerErrorContent(
+    title: String,
+    message: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -55,19 +103,19 @@ internal fun PlayerError(onReload: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.player_error_title),
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             color = OnPlayerColor,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = stringResource(R.string.player_error_message),
+            text = message,
             style = MaterialTheme.typography.bodySmall,
             color = OnPlayerColor,
             textAlign = TextAlign.Center,
         )
-        OutlinedButton(onClick = onReload) {
-            Text(text = stringResource(R.string.player_reload), color = OnPlayerColor)
+        OutlinedButton(onClick = onAction) {
+            Text(text = actionLabel, color = OnPlayerColor)
         }
     }
 }
@@ -98,6 +146,16 @@ internal fun PlayerNotFound(modifier: Modifier = Modifier) {
 private fun PlayerErrorPreview() {
     VideoStreamingTheme(dynamicColor = false) {
         PlayerFrame { PlayerError(onReload = {}) }
+    }
+}
+
+// 通信以外の文言のほうが長いので、文字を大きくする設定でも枠に収まるかを確かめる
+@PreviewLightDark
+@PreviewFontScale
+@Composable
+private fun PlayerPlaybackErrorPreview() {
+    VideoStreamingTheme(dynamicColor = false) {
+        PlayerFrame { PlayerPlaybackError(kind = PlaybackErrorKind.Other, onRetry = {}) }
     }
 }
 

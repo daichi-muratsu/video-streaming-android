@@ -7,6 +7,9 @@
     <string name="player_error_title">動画を読み込めませんでした</string>
     <string name="player_error_message">通信状況を確認して、もう一度お試しください。</string>
     <string name="player_reload">再読み込み</string>
+    <string name="player_playback_error_title">動画を再生できませんでした</string>
+    <string name="player_playback_error_other_message">時間をおいて、もう一度お試しください。</string>
+    <string name="player_retry">再試行</string>
     <string name="player_not_found">動画が見つかりませんでした</string>
 
     <!-- 操作ボタン -->

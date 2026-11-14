@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,6 +81,7 @@ internal fun PlayerControlsOverlay(
     // 実際に映像が進んでいるか（`Player.isPlaying`）。`playPauseState.showPlay`は、読み込み中でも再生する予定なら
     // 一時停止のアイコンを出す（`false`になる）ので、隠す判断には使わない
     val isPlaying by rememberIsPlaying(player)
+    val isBuffering by rememberIsBufferingToPlay(player)
     val progressState = rememberProgressStateWithTickInterval(
         player = player,
         tickIntervalMs = PROGRESS_TICK_INTERVAL_MS,
@@ -114,6 +116,7 @@ internal fun PlayerControlsOverlay(
         controlsVisible = controlsVisible,
         // アイコンは、再生する予定か（読み込み中も含む）で決める。読み込み中に再生のアイコンを出すと、押す必要があるように見えるため
         isPlaying = !playPauseState.showPlay,
+        isBuffering = isBuffering,
         positionMs = progressState.currentPositionMs,
         durationMs = progressState.durationMs,
         onToggleControls = {
@@ -157,6 +160,39 @@ private fun rememberIsPlaying(player: Player): State<Boolean> {
 }
 
 /**
+ * バッファリング中で、再生するつもり（`playWhenReady`が`true`）かを、Composeの状態として受け取る。
+ *
+ * 一時停止中もExoPlayerは読み込みを続けるのでバッファリングになるが、待っても再生は始まらないので含めない
+ * （Media3の`PlayerView`の`SHOW_BUFFERING_WHEN_PLAYING`と同じ条件）。
+ * 使っているMedia3（1.11.1）の`media3-ui-compose`には、これを受け取る状態ホルダーがないため、`Player.Listener`で受け取る
+ */
+@Composable
+private fun rememberIsBufferingToPlay(player: Player): State<Boolean> {
+    val isBuffering = remember(player) { mutableStateOf(player.isBufferingToPlay()) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            // 2つの値から決めるので、どちらが変わっても読み直す
+            override fun onEvents(player: Player, events: Player.Events) {
+                if (events.containsAny(
+                        Player.EVENT_PLAYBACK_STATE_CHANGED,
+                        Player.EVENT_PLAY_WHEN_READY_CHANGED,
+                    )
+                ) {
+                    isBuffering.value = player.isBufferingToPlay()
+                }
+            }
+        }
+        player.addListener(listener)
+        // 画面を離れたあとに、`Player`が古い状態を書き換え続けないように外す
+        onDispose { player.removeListener(listener) }
+    }
+    return isBuffering
+}
+
+private fun Player.isBufferingToPlay(): Boolean =
+    playbackState == Player.STATE_BUFFERING && playWhenReady
+
+/**
  * 操作ボタンを表示する。映像をタップするたびに、操作ボタンを出す・隠すを切り替える。
  *
  * `Player`を受け取らず、表示に必要な値だけを受け取る。プレビューやUIテストで、再生中・一時停止中の見た目を確かめられるようにするため
@@ -165,6 +201,7 @@ private fun rememberIsPlaying(player: Player): State<Boolean> {
 internal fun PlayerControls(
     controlsVisible: Boolean,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     positionMs: Long,
     durationMs: Long,
     onToggleControls: () -> Unit,
@@ -199,11 +236,14 @@ internal fun PlayerControls(
         AnimatedVisibility(visible = controlsVisible, enter = fadeIn(), exit = fadeOut()) {
             // 白い場面でもボタンが見えるように、映像の上に半透明の黒を重ねる
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f))) {
-                PlayPauseButton(
-                    isPlaying = isPlaying,
-                    onClick = onPlayPause,
-                    modifier = Modifier.align(Alignment.Center),
-                )
+                // バッファリング中は、同じ中央に出すスピナーと重ならないように隠す
+                if (!isBuffering) {
+                    PlayPauseButton(
+                        isPlaying = isPlaying,
+                        onClick = onPlayPause,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
                 Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
                     SeekBar(
                         positionMs = shownPositionMs,
@@ -234,6 +274,16 @@ internal fun PlayerControls(
                     }
                 }
             }
+        }
+        // 操作ボタンを隠していても出す。回線が遅くて映像が止まったときに、待てば再生が始まると伝えるため
+        if (isBuffering) {
+            val bufferingDescription = stringResource(R.string.player_loading_description)
+            CircularProgressIndicator(
+                color = OnPlayerColor,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .semantics { contentDescription = bufferingDescription },
+            )
         }
     }
 }
@@ -364,6 +414,7 @@ private fun PlayerControlsPlayingPreview() {
             PlayerControls(
                 controlsVisible = true,
                 isPlaying = true,
+                isBuffering = false,
                 positionMs = 83_000,
                 durationMs = 596_000,
                 onToggleControls = {},
@@ -385,7 +436,30 @@ private fun PlayerControlsPausedPreview() {
             PlayerControls(
                 controlsVisible = true,
                 isPlaying = false,
+                isBuffering = false,
                 positionMs = 0,
+                durationMs = 596_000,
+                onToggleControls = {},
+                onPlayPause = {},
+                onSeek = {},
+                onInteraction = {},
+                isFullscreen = false,
+                onToggleFullscreen = {},
+            )
+        }
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun PlayerControlsBufferingPreview() {
+    VideoStreamingTheme(dynamicColor = false) {
+        PlayerFrame {
+            PlayerControls(
+                controlsVisible = true,
+                isPlaying = true,
+                isBuffering = true,
+                positionMs = 83_000,
                 durationMs = 596_000,
                 onToggleControls = {},
                 onPlayPause = {},
