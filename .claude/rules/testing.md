@@ -32,6 +32,9 @@ paths:
 ## 端末のテスト・JUnit 4
 
 - RoomのDAOのテストは`src/androidTest`に置き、メモリ上のデータベースとアプリと同じ`BundledSQLiteDriver`で確かめる（例：`PlaybackPositionDaoTest`）。公式がRobolectricでのテストを推奨していないため
+- Compose UI Testは、値だけを受け取る部品（`XxxScreen`・`PlayerControls`など）に状態を渡して確かめる（例：`VideoListScreenTest`）。ViewModelと`Player`がなくても、状態ごとの表示を作れるため
+- Compose UI Testの依存関係は`AndroidComposeConventionPlugin`で追加してあるので、各モジュールの`build.gradle.kts`には書かない
+- UIテストは、手で再現するのに通信を切る・データを変えるなどの手順が要る表示（エラー・空・該当なしなど）に絞る。起動するたびに表示されるものは、壊れたときにすぐ気づけるため
 - JUnit 4のテストの関数名は、日本語をバッククォートで囲む（ktlintの`function-naming`が、囲まない日本語の関数名を指摘するため）。空白は入れない（空白を含む関数名は、AndroidではAPI level 30以上でしか使えず、`minSdk`は26のため）
 
 ## 書き方の例
