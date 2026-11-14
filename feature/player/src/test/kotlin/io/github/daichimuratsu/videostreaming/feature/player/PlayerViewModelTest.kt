@@ -1,5 +1,6 @@
 package io.github.daichimuratsu.videostreaming.feature.player
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewmodel.initializer
@@ -10,6 +11,7 @@ import io.github.daichimuratsu.videostreaming.core.domain.fake.FakeVideoReposito
 import io.github.daichimuratsu.videostreaming.core.domain.fake.testVideo
 import io.github.daichimuratsu.videostreaming.core.domain.model.PlaybackPosition
 import io.github.daichimuratsu.videostreaming.core.domain.model.VideoId
+import io.github.daichimuratsu.videostreaming.core.domain.usecase.GetRelatedVideosUseCase
 import io.github.daichimuratsu.videostreaming.core.domain.usecase.GetResumePositionUseCase
 import io.github.daichimuratsu.videostreaming.core.testing.MainDispatcherExtension
 import io.github.daichimuratsu.videostreaming.feature.player.fake.FakeMediaItemFactory
@@ -41,10 +43,13 @@ class PlayerViewModelTest : FunSpec({
         player: FakePlayer = FakePlayer(),
         videoId: String = bigBuckBunny.id.value,
         positions: FakePlaybackPositionRepository = FakePlaybackPositionRepository(),
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ) = PlayerViewModel(
         videoId = videoId,
+        savedStateHandle = savedStateHandle,
         videoRepository = videos,
         getResumePosition = GetResumePositionUseCase(positions),
+        getRelatedVideos = GetRelatedVideosUseCase(videos),
         playbackPositionRepository = positions,
         mediaItemFactory = FakeMediaItemFactory(),
         // FakeのRepositoryはすぐに保存を終えるので、呼び出したスレッドでそのまま実行する
@@ -71,7 +76,7 @@ class PlayerViewModelTest : FunSpec({
             runTest {
                 viewModel(fakeVideos()).uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
             }
         }
@@ -108,7 +113,7 @@ class PlayerViewModelTest : FunSpec({
                     viewModel.reload()
 
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
             }
         }
@@ -136,7 +141,7 @@ class PlayerViewModelTest : FunSpec({
         runTest {
             viewModel.uiState.test {
                 awaitItem() shouldBe PlayerUiState.Loading
-                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
             }
             testScheduler.advanceTimeBy(1.hours)
             testScheduler.runCurrent()
@@ -144,7 +149,7 @@ class PlayerViewModelTest : FunSpec({
             videos.error = IOException()
 
             viewModel.uiState.test {
-                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 testScheduler.advanceUntilIdle()
                 expectNoEvents()
             }
@@ -158,7 +163,7 @@ class PlayerViewModelTest : FunSpec({
             runTest {
                 viewModel(fakeVideos(), player).uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
             }
             player.setMediaItemsList.map { it.mediaId } shouldBe listOf("big-buck-bunny")
@@ -203,7 +208,7 @@ class PlayerViewModelTest : FunSpec({
                     viewModel.reload()
 
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
             }
             player.setMediaItemsList.size shouldBe 1
@@ -218,7 +223,7 @@ class PlayerViewModelTest : FunSpec({
             runTest {
                 viewModel(fakeVideos(), player, positions = positions).uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
             }
             return player.startPositionMs
@@ -279,7 +284,7 @@ class PlayerViewModelTest : FunSpec({
             runTest {
                 viewModel.uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
                 player.currentPositionMs = 42_000
 
@@ -349,7 +354,7 @@ class PlayerViewModelTest : FunSpec({
             runTest {
                 viewModel.uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
                 player.changeIsPlaying(true)
                 testScheduler.runCurrent()
@@ -369,7 +374,7 @@ class PlayerViewModelTest : FunSpec({
         suspend fun loaded(viewModel: PlayerViewModel) {
             viewModel.uiState.test {
                 awaitItem() shouldBe PlayerUiState.Loading
-                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
             }
         }
 
@@ -416,7 +421,7 @@ class PlayerViewModelTest : FunSpec({
                 viewModel.uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
                     viewModel.onBackground()
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
             }
             player.setMediaItemsList.size shouldBe 1
@@ -431,7 +436,7 @@ class PlayerViewModelTest : FunSpec({
                 viewModel.uiState.test {
                     awaitItem() shouldBe PlayerUiState.Loading
                     viewModel.onBackground()
-                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, emptyList())
                 }
 
                 viewModel.onForeground()
@@ -464,6 +469,194 @@ class PlayerViewModelTest : FunSpec({
                 viewModel.onForeground()
             }
             player.playWhenReadyValue shouldBe false
+        }
+    }
+
+    context("関連動画への切り替え") {
+        // 3本とも同じタグ（`animation`）を持つので、互いに関連動画になる
+        val sintel = testVideo("sintel", 600.seconds)
+        val spring = testVideo("spring", 600.seconds)
+
+        fun fakeVideosWithRelated() = FakeVideoRepository(listOf(bigBuckBunny, sintel, spring))
+            .apply { fetchDelay = 1.seconds }
+
+        test("取得に成功したら、関連動画も成功の状態に入る") {
+            runTest {
+                viewModel(fakeVideosWithRelated()).uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+                }
+            }
+        }
+
+        test("関連動画を選ぶと、同じPlayerに、その動画のMediaItemを保存した位置から設定し、prepareを呼ぶ") {
+            val player = FakePlayer()
+            val positions =
+                FakePlaybackPositionRepository(mapOf(sintel.id to PlaybackPosition(300.seconds)))
+            val viewModel = viewModel(fakeVideosWithRelated(), player, positions = positions)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+
+                    viewModel.selectVideo(sintel.id)
+
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+            }
+            player.setMediaItemsList.map { it.mediaId } shouldBe listOf("big-buck-bunny", "sintel")
+            player.startPositionMs shouldBe 300_000
+            player.prepareCount shouldBe 2
+        }
+
+        // 取得に1秒かかるあいだに読み込み中を出していれば、選んだ直後に受け取る値が読み込み中になる
+        test("関連動画を選ぶと、読み込み中を挟まずに、選んだ動画の成功の状態になる") {
+            val viewModel = viewModel(fakeVideosWithRelated())
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+
+                    viewModel.selectVideo(sintel.id)
+
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+            }
+        }
+
+        test("続けて2本選ぶと、あとに選んだ動画だけを設定する") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideosWithRelated(), player)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+
+                    viewModel.selectVideo(sintel.id)
+                    viewModel.selectVideo(spring.id)
+
+                    awaitItem() shouldBe PlayerUiState.Success(spring, listOf(bigBuckBunny, sintel))
+                }
+            }
+            player.setMediaItemsList.map { it.mediaId } shouldBe listOf("big-buck-bunny", "spring")
+        }
+
+        // `FakePlayer`は、本物と同じく`MediaItem`を替えると再生位置を始める位置（ここでは0）に替える
+        test("選ぶと、MediaItemを替える前に、前の動画の位置を前の動画のIDで保存する") {
+            val player = FakePlayer()
+            val positions = FakePlaybackPositionRepository()
+            val viewModel = viewModel(fakeVideosWithRelated(), player, positions = positions)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+                    player.currentPositionMs = 42_000
+
+                    viewModel.selectVideo(sintel.id)
+
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+            }
+            positions.getPosition(bigBuckBunny.id) shouldBe PlaybackPosition(42.seconds)
+        }
+
+        test("切り替えたあとに再生が止まると、新しい動画のIDで保存し、前の動画の位置は変えない") {
+            val player = FakePlayer()
+            val positions = FakePlaybackPositionRepository()
+            val viewModel = viewModel(fakeVideosWithRelated(), player, positions = positions)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+                    player.currentPositionMs = 42_000
+                    viewModel.selectVideo(sintel.id)
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+                player.changeIsPlaying(true)
+                testScheduler.runCurrent()
+                player.currentPositionMs = 7_000
+
+                player.changeIsPlaying(false)
+                testScheduler.runCurrent()
+
+                positions.getPosition(sintel.id) shouldBe PlaybackPosition(7.seconds)
+                positions.getPosition(bigBuckBunny.id) shouldBe PlaybackPosition(42.seconds)
+            }
+        }
+
+        test("切り替えの取得に失敗したら、MediaItemを替えずに一時停止し、エラーになる") {
+            val player = FakePlayer()
+            val videos = fakeVideosWithRelated()
+            val viewModel = viewModel(videos, player)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+                    videos.error = IOException()
+
+                    viewModel.selectVideo(sintel.id)
+
+                    awaitItem() shouldBe PlayerUiState.Error
+                }
+            }
+            player.setMediaItemsList.map { it.mediaId } shouldBe listOf("big-buck-bunny")
+            player.playWhenReadyValue shouldBe false
+        }
+
+        test("切り替えに失敗したあとに再読み込みすると、選んだ動画を読み込む") {
+            val videos = fakeVideosWithRelated()
+            val viewModel = viewModel(videos)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+                    videos.error = IOException()
+                    viewModel.selectVideo(sintel.id)
+                    awaitItem() shouldBe PlayerUiState.Error
+                    videos.error = null
+
+                    viewModel.reload()
+
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+            }
+        }
+
+        test("選んだ動画のIDを、SavedStateHandleに保存する") {
+            val savedStateHandle = SavedStateHandle()
+            val viewModel = viewModel(fakeVideosWithRelated(), savedStateHandle = savedStateHandle)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny, listOf(sintel, spring))
+
+                    viewModel.selectVideo(sintel.id)
+
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+            }
+            savedStateHandle.get<String>(PlayerViewModel.CURRENT_VIDEO_ID_KEY) shouldBe "sintel"
+        }
+
+        // プロセスが終了されたあと、`PlayerKey`は最初の動画のIDのまま、`SavedStateHandle`には選んだ動画のIDが戻る
+        test("SavedStateHandleに動画のIDがあれば、PlayerKeyのIDではなく、そのIDの動画で始める") {
+            val player = FakePlayer()
+            val savedStateHandle =
+                SavedStateHandle(mapOf(PlayerViewModel.CURRENT_VIDEO_ID_KEY to "sintel"))
+            val viewModel = viewModel(
+                fakeVideosWithRelated(),
+                player,
+                videoId = bigBuckBunny.id.value,
+                savedStateHandle = savedStateHandle,
+            )
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    awaitItem() shouldBe PlayerUiState.Success(sintel, listOf(bigBuckBunny, spring))
+                }
+            }
+            player.setMediaItemsList.map { it.mediaId } shouldBe listOf("sintel")
         }
     }
 })

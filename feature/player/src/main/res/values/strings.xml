@@ -31,4 +31,7 @@
     <string name="player_credit_title">クレジット</string>
     <string name="player_license">ライセンス：%1$s</string>
     <string name="player_changes">改変：%1$s</string>
+
+    <!-- 関連動画 -->
+    <string name="player_related_videos">関連動画</string>
 </resources>
