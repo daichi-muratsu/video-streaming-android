@@ -3,6 +3,8 @@ package io.github.daichimuratsu.videostreaming.feature.player.di
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -33,8 +35,20 @@ internal abstract class PlayerModule {
         // `EventLogger`はMedia3の`@UnstableApi`。デバッグのビルドで再生の出来事を確かめるためだけに使う
         @OptIn(UnstableApi::class)
         @Provides
-        fun providePlayer(@ApplicationContext context: Context): Player =
-            ExoPlayer.Builder(context).build().apply {
+        fun providePlayer(@ApplicationContext context: Context): Player = ExoPlayer.Builder(context)
+            // オーディオフォーカスはExoPlayerに任せる。ほかのアプリが音を出し始めたら一時停止し、通知音のあいだは音量を下げる
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                    .build(),
+                /* handleAudioFocus = */
+                true,
+            )
+            // イヤホンを抜いたり、Bluetoothのイヤホンを切ったりしたら一時停止する。スピーカーから急に音が出ないようにするため
+            .setHandleAudioBecomingNoisy(true)
+            .build()
+            .apply {
                 // デバッグのビルドだけ、再生の出来事（選ばれた画質など）をログに書き出す。画質が回線の速さに合わせて
                 // 切り替わるかを確かめるため。`BuildConfig`はライブラリのモジュールでは既定で作られないので、
                 // アプリの`debuggable`（`FLAG_DEBUGGABLE`）で見分ける
