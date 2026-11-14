@@ -61,6 +61,12 @@ class PlayerViewModel @AssistedInject constructor(
     // 再生位置の監視。`MediaItem`を設定する前は`null`で、`onCleared`で保存するかの判定に使う
     private var trackingJob: Job? = null
 
+    // 画面が見えていないあいだは`true`。読み込みがバックグラウンドで終わったときに、再生を始めないために使う
+    private var isInBackground = false
+
+    // バックグラウンドに移る前に再生していた（`playWhenReady`が`true`だった）か。画面に戻ったときに、再生し直すかの判定に使う
+    private var resumesOnForeground = false
+
     // 再読み込みの合図。中身は要らないので`Unit`にする
     private val reloadRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -85,6 +91,26 @@ class PlayerViewModel @AssistedInject constructor(
     /** 動画の情報を読み込み直す。エラーのときに、画面の「再読み込み」ボタンから呼ぶ。 */
     fun reload() {
         reloadRequests.tryEmit(Unit)
+    }
+
+    /**
+     * 画面が見えなくなったときに、再生を一時停止する。画面の`ON_STOP`から呼ぶ。
+     *
+     * バックグラウンドで音を出し続けないため。止めると再生位置の保存も動くので、プロセスが終了されても、バックグラウンドに移った位置から再開できる
+     */
+    fun onBackground() {
+        isInBackground = true
+        // 再生中かどうか（`isPlaying`）ではなく、再生するつもりか（`playWhenReady`）で判定する。
+        // バッファリング中は`isPlaying`が`false`になるが、戻ったときには再生を続けるべきため
+        resumesOnForeground = player.playWhenReady
+        player.pause()
+    }
+
+    /** 画面がまた見えるようになったときに、バックグラウンドに移る前に再生していれば、再生し直す。画面の`ON_START`から呼ぶ。 */
+    fun onForeground() {
+        isInBackground = false
+        if (resumesOnForeground) player.play()
+        resumesOnForeground = false
     }
 
     private fun playerStates(isReload: Boolean): Flow<PlayerUiState> =
@@ -112,7 +138,12 @@ class PlayerViewModel @AssistedInject constructor(
             startPosition.value.inWholeMilliseconds,
         )
         player.prepare()
-        player.playWhenReady = true
+        // 読み込みがバックグラウンドで終わったときは再生を始めず、画面に戻ったときに始める。バックグラウンドで音を出さないため
+        if (isInBackground) {
+            resumesOnForeground = true
+        } else {
+            player.playWhenReady = true
+        }
         startTracking()
     }
 

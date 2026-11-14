@@ -68,7 +68,12 @@
 - 再生位置は、再生中の10秒ごと・再生が止まったとき・画面を離れるとき（`onCleared`）に保存する。`MediaItem`を設定する前に画面を離れたときは保存しない（前に保存した位置を0で上書きするため）
 - 再生を始める位置は`GetResumePositionUseCase`で取得し、`setMediaItem(item, startPositionMs)`に渡す。位置を取得してから`MediaItem`を設定し、取得に失敗したら設定せずにエラーにする（0から再生すると、次の保存で、読み出せなかった再生位置を上書きするため）
 - 画面を離れたあとも続ける処理は、`@ApplicationScope`の`CoroutineScope`で行う（`viewModelScope`は`onCleared`で止まるため）。`Player`はメインスレッドで読み、書き込みだけをこのスコープで行う
-- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
+- 画面が見えなくなったら（`ON_STOP`）一時停止し、見えるようになったら（`ON_START`）、バックグラウンドに移る前に再生していたときだけ再生し直す。Routeが`LifecycleEventEffect`で受け取ってViewModelの関数（`onBackground`・`onForeground`）を呼び、判定と`Player`の操作はViewModelで行う（Fakeでテストするため）。回転で作り直すとき（`isChangingConfigurations`）は呼ばない。`ON_PAUSE`では止めない（画面分割で隣のアプリを操作しただけで止まるため）
+- 再生していたかは`isPlaying`ではなく`playWhenReady`で判定する（バッファリング中は`isPlaying`が`false`になるため）。バックグラウンドで読み込みが終わったときは、再生を始めずに、戻ったときに始める
+- オーディオフォーカスとイヤホンを抜いたときの一時停止は、ExoPlayerの設定（`setAudioAttributes`の`handleAudioFocus`・`setHandleAudioBecomingNoisy`）に任せ、自分で書かない
+- 全画面かどうかは画面の向きで決める（横向きなら全画面）。全画面のボタンは向きを固定し、端末の傾きが固定した向きに追いついたら外す（すぐに外すと、横に持ったまま全画面を終えたときに、また全画面になるため）。追いついたかの判定は`OrientationLock`に分けてテストする。自動回転がオフのときは外さない
+- 再生中だけ`Modifier.keepScreenOn()`で画面を点けたままにする（例：`KeepScreenOnWhilePlaying`）。一時停止中は、通常どおり画面を消す
+- 再生画面のファイル：`PlayerScreen`（Route・Screen・枠・全画面）・`OrientationLock`（全画面の向きの固定）・`PlayerControls`（操作ボタン）・`VideoDetails`（説明の箱）・`PlayerStatus`（読み込み中・エラー・該当なし）・`PlaybackPositionTracker`（再生位置の保存）・`PlayerPlaybackProgress`（`Player`のアダプター）
 
 ## テスト
 

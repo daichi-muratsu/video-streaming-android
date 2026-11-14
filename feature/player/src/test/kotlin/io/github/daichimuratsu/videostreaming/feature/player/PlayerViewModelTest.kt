@@ -362,4 +362,108 @@ class PlayerViewModelTest : FunSpec({
             }
         }
     }
+
+    // 「再生中」は、再生するつもりか（`playWhenReady`）で表す。バッファリング中も、戻ったときに再生を続けるため
+    context("画面が見えなくなったら一時停止し、戻ったら、バックグラウンドに移る前に再生していたときだけ再生し直す") {
+        // 取得に成功し、`startPlayback`で`playWhenReady`が`true`になるまで進める
+        suspend fun loaded(viewModel: PlayerViewModel) {
+            viewModel.uiState.test {
+                awaitItem() shouldBe PlayerUiState.Loading
+                awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+            }
+        }
+
+        test("再生中にバックグラウンドに移ると、一時停止する") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                loaded(viewModel)
+
+                viewModel.onBackground()
+            }
+            player.playWhenReadyValue shouldBe false
+        }
+
+        test("再生中にバックグラウンドに移ってから戻ると、再生し直す") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                loaded(viewModel)
+
+                viewModel.onBackground()
+                viewModel.onForeground()
+            }
+            player.playWhenReadyValue shouldBe true
+        }
+
+        test("一時停止中にバックグラウンドに移ってから戻ると、一時停止のまま") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                loaded(viewModel)
+                player.pause()
+
+                viewModel.onBackground()
+                viewModel.onForeground()
+            }
+            player.playWhenReadyValue shouldBe false
+        }
+
+        test("読み込み中にバックグラウンドに移ると、バックグラウンドで取得に成功しても、MediaItemを設定してprepareを呼ぶが、再生は始めない") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    viewModel.onBackground()
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                }
+            }
+            player.setMediaItemsList.size shouldBe 1
+            player.prepareCount shouldBe 1
+            player.playWhenReadyValue shouldBe false
+        }
+
+        test("読み込み中にバックグラウンドに移り、バックグラウンドで取得に成功したあとに戻ると、再生を始める") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                viewModel.uiState.test {
+                    awaitItem() shouldBe PlayerUiState.Loading
+                    viewModel.onBackground()
+                    awaitItem() shouldBe PlayerUiState.Success(bigBuckBunny)
+                }
+
+                viewModel.onForeground()
+            }
+            player.playWhenReadyValue shouldBe true
+        }
+
+        test("戻って再生し直したあとに一時停止し、もう一度バックグラウンドに移ってから戻ると、一時停止のまま") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                loaded(viewModel)
+                viewModel.onBackground()
+                viewModel.onForeground()
+                player.pause()
+
+                viewModel.onBackground()
+                viewModel.onForeground()
+            }
+            player.playWhenReadyValue shouldBe false
+        }
+
+        test("バックグラウンドに移っていないときに戻る知らせだけが届いても、一時停止中なら、一時停止のまま") {
+            val player = FakePlayer()
+            val viewModel = viewModel(fakeVideos(), player)
+            runTest {
+                loaded(viewModel)
+                player.pause()
+
+                viewModel.onForeground()
+            }
+            player.playWhenReadyValue shouldBe false
+        }
+    }
 })
